@@ -1,9 +1,0 @@
-[submodule "themes/even"]
-	path = themes/even
-	url = https://github.com/getzola/even.git
-[submodule "themes/zola-pickles"]
-	path = themes/zola-pickles
-	url = https://github.com/lukehsiao/zola-pickles.git
-[submodule "themes/slim"]
-	path = themes/slim
-	url = https://github.com/jameshclrk/zola-slim
