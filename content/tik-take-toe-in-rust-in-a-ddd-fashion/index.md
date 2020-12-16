@@ -1,5 +1,5 @@
 +++
-title = "Tik Tak Toe in Rust in a DDD fashion"
+title = "Tik-Tak-Toe in Rust in a DDD fashion"
 date = 2020-12-03
 [taxonomies]
 tags = ["Rust", "DDD", "Game development"]
