@@ -120,7 +120,7 @@ Now that that's been taken care of, let's speak about the arrangement of our fie
 
 So we have a x and y coordinate (we could also name it `row` and `column`) which can be transformed into an 1D index if we know the size with:
 
-`y * PLAYGROUND_SIZE + y`
+`y * PLAYGROUND_SIZE + x`
 
 In Rust:
 
