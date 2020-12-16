@@ -1,0 +1,57 @@
+# The URL the site will be built for
+base_url = "https://dgame.github.io/blog"
+
+# Whether to automatically compile all Sass files in the sass directory
+compile_sass = false
+
+# Whether to do syntax highlighting
+# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
+# The base URL of the site; the only required configuration variable.
+
+# The site title and description; used in feeds by default.
+title = "dgame.dev"
+description = ""
+
+# The default language; used in feeds.
+default_language = "de"
+
+# The site theme to use.
+theme = "slim"
+
+# When set to "true", all code blocks are highlighted.
+highlight_code = true
+
+# The theme to use for code highlighting.
+# See below for list of allowed values.
+highlight_theme = "inspired-github"
+
+# Whether to build a search index to be used later on by a JavaScript library
+build_search_index = false
+
+taxonomies = [
+    # You can enable/disable RSS
+    {name = "categories", rss = true},
+    {name = "tags", rss = true},
+]
+[extra]
+# Put all your custom variables here
+sam_menu = [
+    { text = "posts", link = "/posts" },
+    { text = "about", link = "/about" },
+    { text = "github", link = "https://github.com/Dgame" }
+]
+sam_bottom_menu = true
+home = "home"
+show_word_count = true
+show_reading_time = true
+# Show a summary of a post in a list
+slim_summary = true
+# Show the content of a post in a list
+slim_content = true
+# Links to show at the top of the menu
+slim_menu = []
+# Links to show at the bottom of the menu
+slim_social = [
+    {url = "https://github.com/Dgame", name = "Github"},
+    {url = "https://app.matched.io/profiles/d/3aa34e18-46c2-4fde-bb5a-a3cd0cfd13a9/", name = "matched.io"}
+]
