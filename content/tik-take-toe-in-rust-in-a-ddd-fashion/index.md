@@ -5,19 +5,21 @@ date = 2020-12-03
 tags = ["Rust", "DDD", "Game development"]
 +++
 
-Thanks to the current lockdown I'm reading a lot, currently about **D**omain **D**riven **D**esign. I just wanted to know more about it. But while I was reading, questions like "Well, in which context would that belong"? Or "How would I do that, if this condition has to be met?" popped out. So I've figured I should do an example project where I can apply my current know-how step by step with try and error and enhance it while I'm learning more. I've decided to implement a simple "Tik-Tak-Toe" or "X-O" Game in Rust.
+Thanks to the current lockdown I'm reading a lot, currently about **D**omain **D**riven **D**esign. I just wanted to know more about it. But while I was reading, questions like "Well, in which context would that belong"? Or "How would I do that, if this condition has to be met?" popped up. So I've figured I should do an example project where I can apply my current know-how step by step by trial and error and enhance it while I'm learning more. I've decided to implement a simple "Tik-Tak-Toe" or "X-O" Game in Rust.
 
 Tik-Tak-Toe is a game where you have 9 fields which can be filled by either X or O.
 
 ![Tik-Tak-Toe](tik-take-toe.png)
 
-The first one decides wheter he wants to play X or O for the rest of the game by simply putting it in one of the fields. The opponents has to choose the counterpart, so X if you choose O and O if you choose X. The both players play alternately. If you can place three of your marks in a horizontal, diagonal or vertical row, you win.
+The first one decides whether he wants to play X or O for the rest of the game
+by simply putting it in one of the fields. The opponent has to choose the
+counterpart, so X if you choose O and O if you choose X. Then both players take turns. If you can place three of your marks in a horizontal, diagonal or vertical row, you win.
 
 ## Part 1: Assembling the Game
 
 At first let's talk how we can assemble that Game piece by piece. While doing so, let's talk about the basics of DDD. In Part 2 we will focus on it in more detail.
 
-So, at first let's consider how we can design the fields or `Cell`s. And we've just got our first obstacle. How do we call it? `Field` or `Cell`? We've have to decide not only how we developers will call it but also, how it will be called by other, non-technical people. That's because we need a [Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html) to communicate quickly, easily and with as few misunderstandings as possible.
+First let's consider how we can design the fields or `Cell`s. And we've just got our first obstacle. How do we call it? `Field` or `Cell`? We have to decide not only how we developers will call it but also, how it will be called by other, non-technical people. That's why we need a [Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html) to communicate quickly, easily and with as few misunderstandings as possible.
 
 ### Ubiquitous Language
 A `Cell` is maybe a term a software-developer would choose. But not a non-technical person. So if we would choose `Cell` our communications would be something like this
@@ -32,11 +34,11 @@ A `Cell` is maybe a term a software-developer would choose. But not a non-techni
 And that will happen not once or twice but as often as both parties communicate. And imagine someone new comes into your developer team.
 
 <blockquote>
-<strong>New Developer</strong>: Hey Manager A told me to implement future xyz to the fields but there is not field implementation?<br />
-<strong>Other Developer</strong>: Right, we call them Cell, that the term you have to search for.
+<strong>New Developer</strong>: Hey Manager A told me to implement feature xyz to the fields but there is no field implementation?<br />
+<strong>Other Developer</strong>: Right, we call them Cell, that's the term you have to search for.
 </blockquote>
 
-To call it `Cell` will probably waste time, mind effort and it's error prone. `Field` is much clearer for both parties.
+Calling it `Cell` will probably waste time, mind effort and it's error prone. `Field` is much clearer for both parties.
 
 ### Implementation
 
@@ -114,11 +116,11 @@ pub struct Playground {
 ```
 
 And here we introduced our second Entity-Object: `Playground`.
-Now that that's been taken care of, let's speak about the arrangement of our fields and how we access them later. Our 1D 3x3 `Playground` will later be displayed as a 2D coordinate system like this:
+Now that this has been taken care of, let's speak about the arrangement of our fields and how we access them later. Our 1D 3x3 `Playground` will later be displayed as a 2D coordinate system like this:
 
 ![Tik-Tak-Toe](tik-take-toe-coord.png)
 
-So we have a x and y coordinate (we could also name it `row` and `column`) which can be transformed into an 1D index if we know the size with:
+So we have a x and y axis (we could also name it `row` and `column`) which can be transformed into an 1D index if we know the size with:
 
 `y * PLAYGROUND_SIZE + x`
 
@@ -224,14 +226,14 @@ pub struct Player {
 }
 ```
 
-So, another runtime check which has taken care of by wrapping it in his own type, great! But we have another problem: Nothing prevent us from doing
+Another runtime check which was taken care of by wrapping it in it's own type, great! But we have another problem: Nothing prevents us from doing
 
 ```rust
 let player_1 = Player { name: "Foo".try_into()?, mark: Mark::X };
 let player_2 = Player { name: "Bar".try_into()?, mark: Mark::X };
 ```
 
-Both players can use the same `Mark`! It could just be a copy-paste failure or a typo, but it's still error prone. Let's think of another approach. Regarding the alternativ name "X-O" we just have two options: either you choose X or O. So let's wrap that up in another Value-Object:
+Both players can use the same `Mark`! It could just be a copy-paste error or a typo, but it's still error prone. Let's think of another approach. Regarding the alternative name "X-O" we just have two options: either you choose X or O. So let's wrap that up in another Value-Object:
 
 ```rust
 pub enum Player {
@@ -292,7 +294,7 @@ pub enum Player<'a> {
 }
 ```
 
-One problem with the first approach is, that the generic has to be clared in every struct that holds a `Player`. So variant #2 seems a bit more "low-noise". Let's improve it by using fields:
+One problem with the first approach is, that the generic has to be declared in every struct that holds a `Player`. So variant #2 seems a bit more "low-noise". Let's improve it by using fields:
 
 ```rust
 pub enum Player<'a> {
@@ -382,12 +384,12 @@ impl Marker for O {
 So far, so good. What's missing?
  - how the user-input is accepted and converted
  - how we decide if X or O has won
- - the alternately game play between X and O
+ - the alternating game play between X and O
  - the display of our game play
 
 ### Directions
 
-Let's start with directions. For now, our simple KI can output just random coordinates which - if their not already taken - will be marked. Later we could introduce a smarter solution, but that will not be covered by this post. So, let's talk about how the human player is inserting his choice. We have 9 fields from _top-left_ to _bottom-right_. We can express each of those 9 fields by combining 5 directions:
+Let's start with directions. For now, our simple KI can output just random coordinates which - if they aren't taken already - will be marked. Later we could introduce a smarter solution, but that will not be covered by this post. So, let's talk about how the human player is inserting his choice. We have 9 fields from _top-left_ to _bottom-right_. We can express each of those 9 fields by combining 5 directions:
 
  - top
  - left
@@ -411,7 +413,7 @@ Of course, only certain combinations make sense. `top-left` is perfectly fine, b
 
 If the player inserts "center-right" we want the coordinate `2 / 1` or in other words the index `1 * 3 + 2 = 5`
 
-Since we dealing with a 2 dimensional point of view, we should revise our early implementation of the coordinate-system. Instead of a fixed `PixelCoord` we could use a bit more abstractions:
+Since we're dealing with a 2 dimensional point of view, we should revise our early implementation of the coordinate-system. Instead of a fixed `PixelCoord` we could use a few more abstractions:
 
 ```rust
 pub struct Coord<T> {
@@ -470,7 +472,7 @@ impl Direction {
 }
 ```
 
-But we would still accept invalid input like "top-bottom" you might say. And you're right! `Direction` is not expressive enough: we cannot distinguish between `Row` directions like left, right, center and `Column` directions like top, bottom, center. So let's split things up:
+But we would still accept invalid inputs like "top-bottom" you might say. And you're right! `Direction` is not expressive enough: we cannot distinguish between `Row` directions like left, right, center and `Column` directions like top, bottom, center. So let's split things up:
 
 ```rust
 #[derive(Debug, PartialEq, Eq)]
@@ -577,7 +579,9 @@ impl TryFrom<&str> for PixelCoord {
 
 ### Winning
 
-Initially we quoted that the game is won "if you can place three of your marks in a horizontal, diagonal or vertical row". It's easy to see that as a Human, but not that obvious for a program.
+Initially we quoted that the game is won "if you can place three of your marks
+in a horizontal, diagonal or vertical row". It's easy to see that as a Human,
+but it's not that obvious for a program.
 We could iterate twice (for each player) through each column, row and of course diagonally and check, if it's filled with X or O. Another approach would be to fill all of the `Field`s with powers of 2 from 0 onwards: `2⁰`, `2¹`, `2²` and so on from top-left to bottom-right row by row:
 
 ![](tik-take-toe-2-pow.png)
@@ -617,7 +621,7 @@ impl Playground {
 
 ----
 We've said "within", but what _exactly_ is `(winning_score & score) == winning_score` doing?
-Let's imagine we've marked all `Field`s in the first row and the first `Field` of the second row, so our score would be `1 + 2 + 4 + 8 = 15`. Now we iterate through all `WINNING_SCORES` and stop as soon as we find a match which indicates that we've won. The first `winning_score` is 7. 7 in it's bit-representation is `0111`. Our `score` 15 as bit-representation is `1111`. If we do 7 & 15 we compare each of the bits one by one and put down a 1 if both bits are 1 and 0 otherwise. So we get this:
+Let's imagine we've marked all `Field`s in the first row and the first `Field` of the second row. So our score would be `1 + 2 + 4 + 8 = 15`. Now we iterate through all `WINNING_SCORES` and stop as soon as we find a match which indicates that we've won. The first `winning_score` is 7. 7 in it's bit-representation is `0111`. Our `score` 15 as bit-representation is `1111`. If we do 7 & 15 we compare each of the bits one by one and put down a 1 if both bits are 1 and 0 otherwise. So we get this:
 ```
 0111
 1111
@@ -629,9 +633,9 @@ which is 7 again and since 7 is equal to 7 => we've found a match which means th
 
 ----
 
-### Alternately between X and O
+### Alternating between X and O
 
-At the start of this Post we wrote that "both players play alternately". That should be easy, right? As in reality, we could just "remember" whoever took the last turn:
+At the start of this Post we wrote that "both players take turns". That should be easy, right? Like in reality, we could just "remember" whoever took the last turn:
 
 ```rust
 impl Playground {
@@ -727,7 +731,7 @@ Let's split it up:
 
 ### The Application-Layer
 
-The application layer is the place were the components lives, which are using and orchestrating other components. In DDD the application layer is only using components from itself or from the domain layer. Why not the from the infrastructure layer you're asking? Well, we will speak about that shortly. So, which of the given components could be described as using and orchestrating other components? Right, just `Game`. So that's our only application layer component for now.
+The application layer is the place were the components live, which are using and orchestrating other components. In DDD the application layer is only using components from itself or from the domain layer. Why not from the infrastructure layer you're asking? Well, we will speak about that shortly. So, which of the given components could be described as using and orchestrating other components? Right, just `Game`. So that's our only application layer component for now.
 
 ### The Domain-Layer
 
@@ -735,7 +739,7 @@ Here we will place our entire business logic, expressed through a company-wide u
 An ubiquitous language is a Must-Have. If your speaking about `Client`s but name them `User` in the code, you introduce confusion for all eternity. So, what of our current implementation is domain logic? Well, almost everything except `Game` as we've determined before.
 
 ### The Infrastructure-Layer
-Remember that we want to ask the `Player` in which row /column he wants to place his mark? And that we want to tell everyone who has won? We haven't written that piece of code yet. And that's infrastructure specific. Neither the domain nor the application layer should care where the input comes from or is written to. They should only know that it is somehow possible. The where and how is implemented in his own layer, which is the infrastructure layer.
+Remember that we want to ask the `Player` in which row /column he wants to place his mark? And that we want to tell everyone who has won? We haven't written that piece of code yet. And that's infrastructure specific. Neither the domain nor the application layer should care where the input comes from or is written to. They should only know that it is somehow possible. The where and how is implemented in it's own layer, which is the infrastructure layer.
 
 Since the domain layer must know that it is somehow possible to write or read something, we define the corresponding `interface` there. We have different possible solutions.
 
@@ -806,7 +810,7 @@ pub mod domain {
 ```
 
 Both implementations have advantages and disadvantages. But the biggest flaw is, that in both approaches `Field` (and also `Playground`) "knows" about the fact, that they somehow can be displayed. Why should a `Field` have knowledge about that fact? It's not relevant.
-In the last approach the strategy had to accept the `Field` to display it and the `display` method in `Field` just propagated the call to the `display` of the strategy. Seems a bit meaningless, doesn't it? But we can use that approach and just *format* the `Field` / `Playground` through a external component that get's all necessary informations from the `Field` / `Playground`. Fair enough, we might need a few getter methods, but we get rid of the needless knowledge that both components are displayable. Another component could then display the string representation. The interfaces are located at the domain layer, since the domain layer need to know, that the functionality exists, but not, how it's implemented:
+In the last approach the strategy had to accept the `Field` to display it and the `display` method in `Field` just propagated the call to the `display` of the strategy. Seems a bit meaningless, doesn't it? But we can use that approach and just *format* the `Field` / `Playground` through a external component that get's all necessary information from the `Field` / `Playground`. Fair enough, we might need a few getter methods, but we get rid of the needless knowledge that both components are displayable. Another component could then display the string representation. The interfaces are located at the domain layer, since the domain layer needs to know, that the functionality exists, but not how it's implemented:
 
 ```rust
 mod domain {
@@ -877,7 +881,7 @@ mod infra {
 }
 ```
 
-As you can see, the domain layer is completly isolated from the other layers and the infrastrucutre only knows a few interfaces from the domain layer since he's implementing those. All in all we get the following relationships:
+As you can see, the domain layer is completly isolated from the other layers and the infrastrucutre only knows a few interfaces from the domain layer since it's implementing those. All in all we get the following relationships:
 
 ![](ddd.png)
 
@@ -1001,4 +1005,4 @@ mod app {
 
 ---
 
-And that's it, we've got ourselves a working Tik-Tak-Toe Game and learnt something about DDD. The complete project can be seen on [Github](https://github.com/Dgame/tik-tak-toe-ddd).
+And that's it, we've got ourselves a working Tik-Tak-Toe Game and learnt something about DDD. The complete project can be found on [Github](https://github.com/Dgame/tik-tak-toe-ddd).
