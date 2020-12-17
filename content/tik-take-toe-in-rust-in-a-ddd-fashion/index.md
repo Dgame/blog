@@ -1,6 +1,6 @@
 +++
 title = "Tik-Tak-Toe in Rust in a DDD fashion"
-date = 2020-12-03
+date = 2020-12-16
 [taxonomies]
 tags = ["Rust", "DDD", "Game development"]
 +++
