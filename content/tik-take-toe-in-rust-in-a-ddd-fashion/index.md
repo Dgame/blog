@@ -19,7 +19,7 @@ counterpart, so X if you choose O and O if you choose X. Then both players take 
 
 At first let's talk how we can assemble that Game piece by piece. While doing so, let's talk about the basics of DDD. In Part 2 we will focus on it in more detail.
 
-First let's consider how we can design the fields or `Cell`s. And we've just got our first obstacle. How do we call it? `Field` or `Cell`? We have to decide not only how we developers will call it but also, how it will be called by other, non-technical people. That's why we need a [Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html) to communicate quickly, easily and with as few misunderstandings as possible.
+First let's consider how we can design the fields / cells. And we've just got our first obstacle. How do we call it? `Field` or `Cell`? We have to decide not only how we developers will call it but also, how it will be called by other, non-technical people. That's why we need a [Ubiquitous Language](https://martinfowler.com/bliki/UbiquitousLanguage.html) to communicate quickly, easily and with as few misunderstandings as possible.
 
 ### Ubiquitous Language
 A `Cell` is maybe a term a software-developer would choose. But not a non-technical person. So if we would choose `Cell` our communications would be something like this
@@ -34,7 +34,7 @@ A `Cell` is maybe a term a software-developer would choose. But not a non-techni
 And that will happen not once or twice but as often as both parties communicate. And imagine someone new comes into your developer team.
 
 <blockquote>
-<strong>New Developer</strong>: Hey Manager A told me to implement feature xyz to the fields but there is no field implementation?<br />
+<strong>New Developer</strong>: Hey Manager A told me to implement feature xyz to the fields but there is no "Field" implementation?<br />
 <strong>Other Developer</strong>: Right, we call them Cell, that's the term you have to search for.
 </blockquote>
 
@@ -76,7 +76,47 @@ pub struct Field {
 }
 ```
 
-Yeah, that's it. And while doing so we introduced our first Value-Object `Mark` and our first Entity-Object `Field`. Now we need a way to display the individual `Mark` with either `X` or `O` and give the `Field` some way to express if it's marked and if so, with what:
+Yeah, that's it. And while doing so we introduced our first Value-Object `Mark` and our first Entity-Object `Field`.
+
+#### Value-Object / Entity-Object
+
+"What are those?" you may ask. Well, let's briefly explain these terms:
+
+[Martin Fowler](https://martinfowler.com/) describes a **Value-Object** as
+<blockquote>
+[...]
+Small objects, such as points, monies, or ranges, are good examples of value objects. But larger structures can often be programmed as value objects if they don't have any conceptual identity or don't need share references around a program.
+[...]
+</blockquote>
+
+[Martin Fowler: ValueObject](https://martinfowler.com/bliki/ValueObject.html)
+
+That is more or less the definition for both, `Mark` and `Field`, right? Nope. Because of "if they don't have any conceptual identity" part, we have to distinguish them. `Field` has a "conceptual identity".
+According to Martin Fowler, the difference between **Value-Objects** and **Entity-Objects** is
+<blockquote>
+[...]
+<strong>Entity</strong>: Objects that have a distinct identity that runs through time and different representations. You also hear these called "reference objects".
+[...]
+</blockquote>
+
+[Martin Fowler: EvansClassification]
+
+<blockquote>
+[...]
+<strong>Value Object</strong>: Objects that matter only as the combination of their attributes. Two value objects with the same values for all their attributes are considered equal.
+[...]
+</blockquote>
+
+[Martin Fowler: EvansClassification]
+
+So, `Field` is an Entity because it will change and even if two `Field`s have the same `Mark` we  still have to consider them different because they represent different `Field`s in different locations.
+A `Mark` on the other hand is just a value and `Mark::X` is and will always be the same.
+
+[Martin Fowler: EvansClassification]: https://martinfowler.com/bliki/EvansClassification.html
+
+----
+
+Now that that's covered, we need a way to display the individual `Mark` with either `X` or `O` and give the `Field` some way to express if it's marked and if so, with what:
 
 ```rust
 impl std::fmt::Display for Mark {
@@ -340,8 +380,8 @@ pub enum Marker {
 ```
 
 **Two problems remain**:
- - We still can assign the same player to X and O. That's a problem we can only solve at runtime by comparing the players and - if both are humans - the name.
- - We now can assign X or O twice because of the type `Marker`. We should make X and O to be their very own types:
+ - We still can assign the same player to X and O. But that may be intentional, since two people can have the same name and the perspective of two bots playing against each other also sounds exciting.
+ - We now can assign X or O twice (because of the type `Marker`) and must pay attention to it at runtime. We should make X and O to be their very own types:
 
 ```rust
 pub struct X {
@@ -353,7 +393,7 @@ pub struct O {
 }
 ```
 
-But we still need some sort of generic representation for a mark so that `Field` can take either X or O. Let's try this approach:
+But we still need some kind of generic representation for a `Mark` so that we can treat both with the same logic:
 
 ```rust
 pub trait Marker {
@@ -425,7 +465,7 @@ pub type PixelCoord = Coord<Pixel>;
 pub type DirectionCoord = Coord<Direction>;
 ```
 
-In DDD both of them are Value-Objects.
+<small>In DDD both of them would be Value-Objects.</small>
 
 To parse an input like `top-left` we have to split the hyphen and parse both words as single `Direction`s. If the string does not contain a hyphen, only "center" is a valid input. If there's a hyphen, there can only be one, which separates the two directions:
 
@@ -518,10 +558,10 @@ fn parse_direction(s: &str) -> Result<(Row, Column), DirectionError> {
     if s.contains('-') {
         let mut parts = s.split('-');
         match (parts.next(), parts.next(), parts.next()) {
-            // if you enter "top-left"
+            // if you enter e.g. "center-left"
             (Some(first_part), Some(second_part), None) => match (Row::parse_str(second_part), Column::parse_str(first_part)) {
                 (Ok(row), Ok(column)) => Ok((row, column)),
-                // if you enter "left-top"
+                // if you enter e.g. "left-center"
                 _ => Ok((Row::parse_str(first_part)?, Column::parse_str(second_part)?)),
             },
             _ => Err(DirectionError::TooManyParts),
@@ -534,7 +574,7 @@ fn parse_direction(s: &str) -> Result<(Row, Column), DirectionError> {
 }
 ```
 
-Much better. Not only would an input like "top-bottom" now be a `DirectionError`, we also don't have to revise the implementation of our coordinate-system!
+Much better. Not only would an input like "top-bottom" now be a `DirectionError`, we also don't have to revise the implementation of our coordinate-system. And we made it more intuitive by accepting different (but still valid) combinations as _center-left_ **and** _left-center_.
 
 Now that we can translate user input into a `Row` and a `Column`, we need a way to convert those to `PixelCoord`inates:
 
@@ -721,7 +761,7 @@ The `play` method has the same [SLOC](https://en.wikipedia.org/wiki/Source_lines
 
 ## Part 2: DDD
 
-Domain-Driven-Design distinguishes between three layers:
+**D**omain-**D**riven-**D**esign distinguishes between three layers:
 
  - The Domain-Layer, where our business logic lives
  - The Infrastructure-Layer, for concrete infrastructure implementation
@@ -826,7 +866,7 @@ mod domain {
 }
 ```
 
-The implementation will be located in the infrastructure layer:
+The concrete implementation will be located in the infrastructure layer:
 
 ```rust
 mod domain {
@@ -872,6 +912,7 @@ mod infra {
         fn display(&self, playground: &Playground) {
             for (index, field) in playground.get_fields().iter().enumerate() {
                 print!("{}", self.formatter.format(field));
+                // One row has 3 fields, so after that we have to start in a new row
                 if (index + 1) % 3 == 0 {
                     println!();
                 }
@@ -1003,6 +1044,6 @@ mod app {
 }
 ```
 
----
+## Summary
 
-And that's it, we've got ourselves a working Tik-Tak-Toe Game and learnt something about DDD. The complete project can be found on [Github](https://github.com/Dgame/tik-tak-toe-ddd).
+And that's it, we've got ourselves a working Tik-Tak-Toe Game and learnt something about DDD. The complete project can be seen on [Github](https://github.com/Dgame/tik-tak-toe-ddd). I must say that everything here is **my own and current understanding of DDD**. If you have any suggestions for improvement of any kind, please let me know [or write a PR](https://github.com/Dgame/blog/pulls). I'm happy to receive any kind of criticism!
