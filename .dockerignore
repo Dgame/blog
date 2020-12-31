@@ -1,0 +1,6 @@
+.docker
+.github
+.env*
+Makefile
+.gitmodules
+.git
