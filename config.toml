@@ -35,12 +35,6 @@ taxonomies = [
 ]
 [extra]
 # Put all your custom variables here
-sam_menu = [
-    { text = "posts", link = "/posts" },
-    { text = "about", link = "/about" },
-    { text = "github", link = "https://github.com/Dgame" }
-]
-sam_bottom_menu = true
 home = "home"
 show_word_count = true
 show_reading_time = true
