@@ -1,3 +1,6 @@
 [submodule "themes/slim"]
 	path = themes/slim
 	url = https://github.com/jameshclrk/zola-slim
+[submodule "zola-slim"]
+	path = zola-slim
+	url = https://github.com/jameshclrk/zola-slim
