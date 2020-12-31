@@ -1,24 +1,14 @@
 version: "3.7"
 
-# services:
-#   rust-zola:
-#     container_name: rust-zola
-#     build:
-#       dockerfile: ./.docker/Dockerfile
-#       context: .
-#       args:
-#         USER_ID: $USER_ID
-#     env_file: .env
-#     volumes:
-#       - .:/home/:ro
-#     # ports:
-#     #   - "8088:9000"
 services:
   zola:
     build:
       dockerfile: ./.docker/Dockerfile
       context: .
       target: zola-base
+      args:
+        USER_ID: $USER_ID
+    env_file: .env
     command: zola serve --interface 0.0.0.0
     volumes:
       - .:/blog
