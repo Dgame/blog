@@ -76,9 +76,9 @@ final class Rename
 }
 ```
 
-To define your own attributes, you have to annotate them with `#[Attribute]`. If you do that, yopu can smash them to everything you want, properties, classes, parameters etc. But we want to limit this only to properties, therefore, we have to specify the attribute-flags (the first and only constructor argument) as such: `Attribute::TARGET_PROPERTY`. What about `Attribute::IS_REPEATABLE`? Normally we cannot annoate something with the same attribute twice, but in the case of `Alias` we want to allow that, therefore we have to extend the attribute-flags (which is a bit-mask) with `Attribute::IS_REPEATABLE`.
+To define your own attributes, you have to annotate them with `#[Attribute]`. If you do that, you can smash them on everything you want, properties, classes, parameters etc. But we want to limit this only to properties, therefore, we have to specify the attribute-flags (the first and only constructor argument) as such: `Attribute::TARGET_PROPERTY`. What about `Attribute::IS_REPEATABLE`? Normally we cannot annotate something with the same attribute twice, but in the case of `Alias` we want to allow that, therefore we have to extend the attribute-flags (which is a bit-mask) with `Attribute::IS_REPEATABLE`.
 
-With that in mind, we can do the interepretation with specialized `Deserializers`:
+With that in mind, we can do the interpretation with specialized `Deserializers`:
 
 ```php
 <?php
@@ -583,7 +583,7 @@ At last, we deserialize the value with the corresponding `Deserializer`. If the 
 
 ## What about arrays?
 
-Arrays are a bit special. Since PHP does not support generics (yet), we have no way of knowing, what specific types are stored inside of them. In Languages like Rust, Java etc. you have `Vec<T>` or `List<T>` where `T` is the specific type. Also, in PHP an array can hold multiple absolute different types. But for simplicity we just support arrays which have values of the same type. But how do we specify, which type it is?
+Arrays are a bit special. Since PHP does not support generics (yet), we have no way of knowing, what specific types are stored inside of them. In Languages like Rust, Java etc. you have `Vec<T>` or `List<T>` where `T` is the specific type. Also, in PHP an array can hold multiple absolute different types. So for simplicity, we just support arrays which have values of the same type. But how do we specify, which type it is?
 
 Consider this:
 
@@ -845,7 +845,7 @@ B Object
 )
 ```
 
-That looks promising! But, it's still nasty to assembly these `Deserializer` by hand. What I want is, I don't know, maybe to use a trait to inject the deserialize-functionality into the specific class.
+That looks promising! But, it's still nasty to assembly these `Deserializer` by hand. What I want is, to use a trait to inject the deserialize-functionality into the specific class.
 Here's how we _could_ do it:
 
 ```php
