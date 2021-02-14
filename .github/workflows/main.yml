@@ -1,5 +1,8 @@
 
-on: push
+on: 
+  push:
+    branches:
+      - master
 name: Build and deploy GH Pages
 jobs:
   build:
