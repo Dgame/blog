@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <title>
+Github Actions &middot; dgame.dev
+</title>
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog&#x2F;slim.css">
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet'
+        type='text/css'>
+    
+    
+</head>
+
+<body>
+    <div class="container">
+        
+<div class="header">
+    <h1 class="site-title"><a href="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog">dgame.dev</a></h1>
+    <p class="site-tagline"></p>
+    <div class="nav">
+        <a class="nav-btn" href="#">
+            <span class="ci ci-burger"></span>
+        </a>
+        <ul class="nav-list">
+            
+            <li class="spacer">&ac;</li>
+            
+            
+            <li><a href="https://github.com/Dgame">Github</a></li>
+            
+            <li><a href="https://app.matched.io/profiles/d/3aa34e18-46c2-4fde-bb5a-a3cd0cfd13a9/">matched.io</a></li>
+            
+            
+        </ul>
+    </div>
+</div>
+
+        <div class="content">
+            <div class="posts">
+                
+<div class="post">
+    
+    
+<h2 class="post-title"><a href="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog&#x2F;github-actions&#x2F;">Github Actions</a></h2>
+<div class="post-header">
+    <span class="post-date">November 01, 2020</span>
+    
+    <div class="post-tags">
+        
+        <span class="post-tag">#<a href="https://dgame.github.io/blog/tags/github/">Github</a></span>
+        
+        <span class="post-tag">#<a href="https://dgame.github.io/blog/tags/github-actions/">Github-Actions</a></span>
+        
+    </div>
+    
+</div>
+
+    <div class="post-content">
+        <p>In the past few months I've ported most of my private and work projects from Travis-CI / Circle-CI to Github-Actions. It went well so far, but I've experienced some rough edges I want to tell you about.</p>
+<h2 id="how-do-i-handle-private-dependencies">How do I handle private dependencies?</h2>
+<p>Since I come from Travis-CI and Circle-CI, it was difficult for me to figure out how to handle SSH-Keys to clone private repositories / dependencies. In Circle-CI  / Travis-CI you can enable SSH-Keys through the setting-section in the UI - but do Github-Actions have an UI for that? Presumably not, except that Github and the settings of your repositories are the UI. Took me a while to figure that out. Github-Actions are just another addon to Github. Everything plays well together, you just have to think that way. So, to be able to clone private dependencies, you have to declare a Github-Token. You can create a personal access token by visiting <code>Profile &gt; Settings &gt; Developer settings &gt; Personal access tokens</code>, but Github offers us a global one as <code>GITHUB_TOKEN</code> by default. And this is how you use it:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Some Github-Action
+  uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">some/github-action@v1
+  with</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">token</span><span style="color:#323232;">: </span><span style="color:#183691;">${{ secrets.GITHUB_TOKEN }}
+</span></code></pre>
+<ul>
+<li><a href="https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_idstepsuses">uses</a> let's you define a &quot;reusable unit of code&quot; or - in other words - an external Github-Action.</li>
+<li><a href="https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_idstepswith">with</a> is how you delegate arguments to that action. Pretty neat, isn't it?</li>
+</ul>
+<p>Another example: As soon as new code is committed, you want to stop the previous
+workflow immediately to not waste resources (since Github-Actions are not free for private repositories). But therefore you need a Github-Token to authorize that action. Here's the code:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Cancel previous run
+  uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">styfle/cancel-workflow-action@0.6.0
+  with</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">access_token</span><span style="color:#323232;">: </span><span style="color:#183691;">${{ secrets.GITHUB_TOKEN }}
+</span></code></pre><h2 id="how-do-i-handle-dependency-updates">How do I handle dependency updates?</h2>
+<p>I use <a href="https://dependabot.com/">dependabot</a> and the <a href="https://github.com/marketplace/dependabot-preview">Github
+App</a> for that particular
+use-case but there are dozens of Github-Actions and apps out there. The
+advantage of dependabot: it's easy to grasp and free of charge.</p>
+<h3 id="auto-merge">auto-merge</h3>
+<p>dependabot will occasionally open Pull-Requests to update your
+dependencies. Many of them can be merged without problems, but some will require
+you to update your code. For those which can be merged without problems, we
+usually don't want to review them. We want them to be merged immediately.
+You can use <a href="https://github.com/marketplace/actions/dependabot-auto-merge">this github-action</a> to accomplish that. I use it like this:</p>
+<p><em>.github/workflows/auto-merge.yml</em></p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;"> - </span><span style="color:#63a35c;">uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">ahmadnassri/action-dependabot-auto-merge@v2
+   with</span><span style="color:#323232;">:
+     </span><span style="color:#63a35c;">target</span><span style="color:#323232;">: </span><span style="color:#63a35c;">semver:patch
+     github-token</span><span style="color:#323232;">: </span><span style="color:#183691;">${{ secrets.REPO_GITHUB_TOKEN }}
+</span></code></pre>
+<p>Per default we just want to merge <em>patch</em>-level updates. Those shouldn't do any harm - as long as they follow <a href="https://semver.org/">semver</a>.</p>
+<hr />
+<blockquote>
+<p>You may have noticed the {% raw %}<code>${{ secrets.REPO_GITHUB_TOKEN }}</code>{% endraw %} part. That's a <strong>PAT</strong>, a <strong>P</strong>ersonal-<strong>A</strong>ccess <strong>T</strong>oken. We have to use one, because otherwise we would get this:</p>
+<p><img src="https://dgame.github.io/blog/github-actions/github-bot-dependabot.png" alt="dependabot" /></p>
+<p>Only with a PAT we have push access.</p>
+</blockquote>
+<hr />
+<p>Furthermore I use this configuration file</p>
+<p><em>.github/auto-merge.yml</em></p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">- </span><span style="color:#63a35c;">match</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">dependency_type</span><span style="color:#323232;">: </span><span style="color:#63a35c;">development
+    update_type</span><span style="color:#323232;">: </span><span style="color:#63a35c;">semver:minor
+
+</span><span style="color:#323232;">- </span><span style="color:#63a35c;">match</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">dependency_type</span><span style="color:#323232;">: </span><span style="color:#63a35c;">production
+    update_type</span><span style="color:#323232;">: </span><span style="color:#183691;">semver:patch
+</span></code></pre>
+<p>Which translates to: for <em>development</em> dependencies we allow to automatically merge <em>patch</em>- <strong>and</strong> <em>minor</em>-level updates but for <em>production</em> dependencies only <em>patch</em>-level ones (the default).</p>
+<hr />
+<p>It seems that dependabot can do auto-merging <a href="https://dependabot.com/docs/config-file/#automerged_updates">by itself</a> now, but it's still a good reference to show the difference between {% raw %}<code>${{ secrets.GITHUB_TOKEN }}</code>{% endraw %} and the need for a PAT.</p>
+<h3 id="auto-assign">auto-assign</h3>
+<p>It's always good to be informed when dependencies updates arrive. At least I would like to be assigned to the PR. If the PR gets automatically merged I've been informed and otherwise I have to review the PR and merge it by hand. That's where the <a href="https://github.com/marketplace/actions/auto-assign-action">auto-assign action</a> should be used in your workflow:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;"> - </span><span style="color:#63a35c;">uses</span><span style="color:#323232;">: </span><span style="color:#183691;">kentaro-m/auto-assign-action@v1.1.2
+</span></code></pre>
+<p>and my configuration file looks like this</p>
+<p><em>.github/auto_assign.yml</em></p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-style:italic;color:#969896;"># Set to true to add reviewers to pull requests
+</span><span style="color:#63a35c;">addReviewers</span><span style="color:#323232;">: </span><span style="color:#0086b3;">false
+</span><span style="font-style:italic;color:#969896;"># Set to true to add assignees to pull requests
+</span><span style="color:#63a35c;">addAssignees</span><span style="color:#323232;">: </span><span style="color:#0086b3;">true
+</span><span style="color:#63a35c;">assignees</span><span style="color:#323232;">:
+  - </span><span style="color:#183691;">Dgame
+</span></code></pre>
+<p>For other PR's you can provide reviewers as well, so that you don't have to do it manually. Sadly, it's not possible to assign reviewers based on words or context information, so in a large code-base it can be somewhat difficult. But additional use of <a href="https://docs.github.com/en/free-pro-team@latest/github/creating-cloning-and-archiving-repositories/about-code-owners">Code-Ownership</a> should do the trick.</p>
+<h2 id="how-do-i-deploy-to-aws-lambda">How do I deploy to AWS-Lambda?</h2>
+<p>We have some Lambda Functions written in <a href="https://www.rust-lang.org/">Rust</a>. Whenever a branch is created, we want to be able to test that branch on our development environment on AWS. The artifacts (the executables) are stored in an S3 bucket and need to be placed in the specific lambda. I'll skip the test part:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Test &amp; Deploy
+
+</span><span style="color:#0086b3;">on</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">pull_request</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">types</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">opened
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">synchronize
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">reopened
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">ready_for_review
+  push</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">branches</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">master
+
+jobs</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">tests</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">...SKIP...
+  deploy</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">needs</span><span style="color:#323232;">: </span><span style="color:#63a35c;">tests
+    if</span><span style="color:#323232;">: </span><span style="color:#63a35c;">github.event.pull_request.draft == false
+    runs-on</span><span style="color:#323232;">: </span><span style="color:#63a35c;">ubuntu-latest
+    steps</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">actions/checkout@v2
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Build with Lambda Docker Container
+        run</span><span style="color:#323232;">: </span><span style="color:#63a35c;">docker run --rm \
+          -v ${PWD}:/code \
+          -v ${HOME}/.cargo/registry:/root/.cargo/registry \
+          -v ${HOME}/.cargo/git:/root/.cargo/git \
+          softprops/lambda-rust
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">igordcsouza/github-action-get-branch-name@master
+        env</span><span style="color:#323232;">:
+          </span><span style="color:#63a35c;">GITHUB_TOKEN</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.GITHUB_TOKEN }}
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Configure AWS credentials
+        uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">aws-actions/configure-aws-credentials@v1
+        with</span><span style="color:#323232;">:
+          </span><span style="color:#63a35c;">aws-access-key-id</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.AWS_REGION }}
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">S3 Upload
+        run</span><span style="color:#323232;">: </span><span style="font-weight:bold;color:#a71d5d;">|
+</span><span style="color:#183691;">          aws s3 cp ./target/lambda/release/lambda.zip s3://data/lambda-${BRANCH_NAME}.zip
+</span></code></pre>
+<ul>
+<li><code>if: github.event.pull_request.draft == false</code><br />
+Makes sure that draft PR's don't trigger this workflow</li>
+<li><code>needs: tests</code><br />
+Make sure that the job <code>tests</code> has to succeed before the <code>deploy</code> job can start. If even one of the steps of the <code>tests</code> job fail, <code>deploy</code> won't be triggered.</li>
+<li><code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_REGION</code><br />Your AWS credentials, which must be kept as secrets in your repository.</li>
+</ul>
+<h2 id="how-do-i-let-workflows-interact-with-each-other">How do I let workflows interact with each other?</h2>
+<p>That was a tricky one: Recently I've enabled <a href="https://molecule.readthedocs.io/en/latest/">molecule tests</a> for my <a href="https://www.ansible.com/">ansible-playbook</a> collection <a href="https://github.com/Dgame/dgame-system">dgame-system</a>. Since those tests can take a while (20 to 40 minutes each) I got bored and thought &quot;Why should I wait for the tests to complete and merge it afterwards if it can be automated?&quot;. Should be easy. Just wait for the tests to succeed and then merge. Ideally we should wait for review-requests, if needed. And it could be bothersome to merge each Pull-Request as soon as the tests passed. Maybe I want to add stuff to it later or just want to present a possible solution, which isn't final yet. Maybe we need more than green tests. Some sort of identification that we are ready and the PR can be merged as soon as all requirements are fulfilled. A <em>label</em> perhaps. The label can be created / removed with <a href="https://github.com/marketplace/actions/add-remove-label">this</a> Github-Action. So, what needs to be done?</p>
+<ul>
+<li>Let's run the tests</li>
+<li>As soon as the tests are green and all required reviewers have submitted their review (and only if a specific label is set) the PR should be merged</li>
+</ul>
+<p>We only want the tests to run if new code is committed and we want to trigger the <a href="https://github.com/marketplace?query=auto+merge">auto-merge action</a> (I'm using <a href="https://github.com/pascalgn/automerge-action">this</a>) as soon as the tests pass (and if that specific label is set). That means we have two workflows: The first workflow is triggered as soon as the PR opens, reopens or gets synchronized (e.g. code is committed, another branch is merged, etc.) and the second workflow with the auto merge which is triggered by the first workflow, when the PR is labeled or a review is submitted. Here's the things: Github does not allow Workflows to trigger other Workflows to protect you from endless loops and things like that. So either we just use one workflow and have to mark the PR with the auto label <strong>before</strong> the tests are green or we have to figure out how one workflow can trigger another. For the lazy ones, here's the solution for the fist case:</p>
+<p><em>.github/workflows/workflow.yml</em></p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Workflow
+</span><span style="color:#0086b3;">on</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">pull_request</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">types</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">opened
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">synchronize
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">reopened
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">ready_for_review
+jobs</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">tests</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">runs-on</span><span style="color:#323232;">: </span><span style="color:#63a35c;">ubuntu-latest
+    steps</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">actions/checkout@v2
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Run tests
+        run</span><span style="color:#323232;">: </span><span style="color:#63a35c;">cargo test
+  auto-merge</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">runs-on</span><span style="color:#323232;">: </span><span style="color:#63a35c;">ubuntu-latest
+    needs</span><span style="color:#323232;">: </span><span style="color:#63a35c;">tests
+    steps</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">auto-merge
+        uses</span><span style="color:#323232;">: </span><span style="color:#183691;">&quot;pascalgn/automerge-action@v0.12.0&quot;
+        </span><span style="color:#63a35c;">env</span><span style="color:#323232;">:
+          </span><span style="color:#63a35c;">GITHUB_TOKEN</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.GITHUB_TOKEN }}
+          MERGE_LABELS</span><span style="color:#323232;">: </span><span style="color:#183691;">&quot;auto merge,!work in progress,!wip&quot;
+</span></code></pre>
+<p>If you're still with me, here's the solution how one workflow can trigger
+another. You may have an idea already. We could simply create a label and the second workflow reacts on that event. Well, Github still doesn't allow that. At least not, if you use your {% raw %}<code>${{ secrets.GITHUB_TOKEN }}</code>{% endraw %} but <a href="https://stackoverflow.com/a/64078507/6340462">a clever guy</a> figured out, that you can use a
+personal access token instead. With this, Github does allow that the creation of e.g. a label triggers the second workflow and we're good to go. Here's the solution:</p>
+<p>Here's how it works.</p>
+<p><img src="https://dgame.github.io/blog/github-actions/workflow.png" alt="Workflow" /></p>
+<hr />
+<p><em>.github/workflows/workflow.yml</em></p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Workflow
+</span><span style="color:#0086b3;">on</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">pull_request</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">types</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">opened
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">synchronize
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">reopened
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">ready_for_review
+jobs</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">tests</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">runs-on</span><span style="color:#323232;">: </span><span style="color:#63a35c;">ubuntu-latest
+    steps</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">actions/checkout@v2
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">remove label
+        uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">buildsville/add-remove-label@v1
+        with</span><span style="color:#323232;">:
+          </span><span style="color:#63a35c;">token</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.GITHUB_TOKEN }}
+          label</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Ready
+          type</span><span style="color:#323232;">: </span><span style="color:#63a35c;">remove
+      </span><span style="color:#323232;">- </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Run tests
+        run</span><span style="color:#323232;">: </span><span style="color:#63a35c;">cargo test
+  label-branch</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">runs-on</span><span style="color:#323232;">: </span><span style="color:#63a35c;">ubuntu-latest
+    needs</span><span style="color:#323232;">: </span><span style="color:#63a35c;">tests
+    steps</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">add label
+        uses</span><span style="color:#323232;">: </span><span style="color:#63a35c;">buildsville/add-remove-label@v1
+        with</span><span style="color:#323232;">:
+          </span><span style="color:#63a35c;">token</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.REPO_GITHUB_TOKEN }}
+          label</span><span style="color:#323232;">: </span><span style="color:#63a35c;">Ready
+          type</span><span style="color:#323232;">: </span><span style="color:#183691;">add
+</span></code></pre>
+<p>Before we can (re)add the label, we will remove it so that the corresponding event is reliably triggered.</p>
+<hr />
+<p><em>.github/workflows/auto-merge.yml</em></p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">auto-merge
+</span><span style="color:#0086b3;">on</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">pull_request</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">types</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">labeled
+jobs</span><span style="color:#323232;">:
+  </span><span style="color:#63a35c;">auto-merge</span><span style="color:#323232;">:
+    </span><span style="color:#63a35c;">runs-on</span><span style="color:#323232;">: </span><span style="color:#63a35c;">ubuntu-latest
+    steps</span><span style="color:#323232;">:
+      - </span><span style="color:#63a35c;">name</span><span style="color:#323232;">: </span><span style="color:#63a35c;">auto-merge
+        uses</span><span style="color:#323232;">: </span><span style="color:#183691;">&quot;pascalgn/automerge-action@v0.12.0&quot;
+        </span><span style="color:#63a35c;">env</span><span style="color:#323232;">:
+          </span><span style="color:#63a35c;">GITHUB_TOKEN</span><span style="color:#323232;">: </span><span style="color:#63a35c;">${{ secrets.GITHUB_TOKEN }}
+          MERGE_LABELS</span><span style="color:#323232;">: </span><span style="color:#183691;">&quot;auto merge,!work in progress,!wip&quot;
+</span></code></pre>
+    </div>
+    
+</div>
+
+            </div>
+            
+        </div>
+        
+<div class="footer">
+    
+    <p>Powered by <a href="https://getzola.org">Zola</a></p>
+    
+</div>
+
+    </div>
+    <script src="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog&#x2F;js&#x2F;slim.js"></script>
+    
+</body>
+
+</html>

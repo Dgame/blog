@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://dgame.github.io/blog/</loc>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/github-actions/</loc>
+        <lastmod>2020-11-01</lastmod>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/tags/</loc>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/tags/ddd/</loc>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/tags/game-development/</loc>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/tags/github-actions/</loc>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/tags/github/</loc>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/tags/rust/</loc>
+    </url>
+    <url>
+        <loc>https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/</loc>
+        <lastmod>2020-12-16</lastmod>
+    </url>
+</urlset>

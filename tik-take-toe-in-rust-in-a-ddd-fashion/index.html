@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <title>
+Tik-Tak-Toe in Rust in a DDD fashion &middot; dgame.dev
+</title>
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog&#x2F;slim.css">
+    <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro' rel='stylesheet'
+        type='text/css'>
+    
+    
+</head>
+
+<body>
+    <div class="container">
+        
+<div class="header">
+    <h1 class="site-title"><a href="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog">dgame.dev</a></h1>
+    <p class="site-tagline"></p>
+    <div class="nav">
+        <a class="nav-btn" href="#">
+            <span class="ci ci-burger"></span>
+        </a>
+        <ul class="nav-list">
+            
+            <li class="spacer">&ac;</li>
+            
+            
+            <li><a href="https://github.com/Dgame">Github</a></li>
+            
+            <li><a href="https://app.matched.io/profiles/d/3aa34e18-46c2-4fde-bb5a-a3cd0cfd13a9/">matched.io</a></li>
+            
+            
+        </ul>
+    </div>
+</div>
+
+        <div class="content">
+            <div class="posts">
+                
+<div class="post">
+    
+    
+<h2 class="post-title"><a href="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog&#x2F;tik-take-toe-in-rust-in-a-ddd-fashion&#x2F;">Tik-Tak-Toe in Rust in a DDD fashion</a></h2>
+<div class="post-header">
+    <span class="post-date">December 16, 2020</span>
+    
+    <div class="post-tags">
+        
+        <span class="post-tag">#<a href="https://dgame.github.io/blog/tags/rust/">Rust</a></span>
+        
+        <span class="post-tag">#<a href="https://dgame.github.io/blog/tags/ddd/">DDD</a></span>
+        
+        <span class="post-tag">#<a href="https://dgame.github.io/blog/tags/game-development/">Game development</a></span>
+        
+    </div>
+    
+</div>
+
+    <div class="post-content">
+        <p>Thanks to the current lockdown I'm reading a lot, currently about <strong>D</strong>omain <strong>D</strong>riven <strong>D</strong>esign. I just wanted to know more about it. But while I was reading, questions like &quot;Well, in which context would that belong&quot;? Or &quot;How would I do that, if this condition has to be met?&quot; popped up. So I've figured I should do an example project where I can apply my current know-how step by step by trial and error and enhance it while I'm learning more. I've decided to implement a simple &quot;Tik-Tak-Toe&quot; or &quot;X-O&quot; Game in Rust.</p>
+<p>Tik-Tak-Toe is a game where you have 9 fields which can be filled by either X or O.</p>
+<p><img src="https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/tik-take-toe.png" alt="Tik-Tak-Toe" /></p>
+<p>The first one decides whether he wants to play X or O for the rest of the game
+by simply putting it in one of the fields. The opponent has to choose the
+counterpart, so X if you choose O and O if you choose X. Then both players take turns. If you can place three of your marks in a horizontal, diagonal or vertical row, you win.</p>
+<h2 id="part-1-assembling-the-game">Part 1: Assembling the Game</h2>
+<p>At first let's talk how we can assemble that Game piece by piece. While doing so, let's talk about the basics of DDD. In Part 2 we will focus on it in more detail.</p>
+<p>First let's consider how we can design the fields / cells. And we've just got our first obstacle. How do we call it? <code>Field</code> or <code>Cell</code>? We have to decide not only how we developers will call it but also, how it will be called by other, non-technical people. That's why we need a <a href="https://martinfowler.com/bliki/UbiquitousLanguage.html">Ubiquitous Language</a> to communicate quickly, easily and with as few misunderstandings as possible.</p>
+<h3 id="ubiquitous-language">Ubiquitous Language</h3>
+<p>A <code>Cell</code> is maybe a term a software-developer would choose. But not a non-technical person. So if we would choose <code>Cell</code> our communications would be something like this</p>
+<blockquote>
+<strong>Developer</strong>: So if a Player marks the Cell with...<br />
+<strong>Manager</strong>: Wait wait wait. What's a Cell? Do you mean one of the 9 fields?<br />
+<strong>Developer</strong>: Yes, we call them Cells internally<br />
+<strong>Manager</strong>: Right, I forgot! Please continue.
+</blockquote>
+<p>And that will happen not once or twice but as often as both parties communicate. And imagine someone new comes into your developer team.</p>
+<blockquote>
+<strong>New Developer</strong>: Hey Manager A told me to implement feature xyz to the fields but there is no "Field" implementation?<br />
+<strong>Other Developer</strong>: Right, we call them Cell, that's the term you have to search for.
+</blockquote>
+<p>Calling it <code>Cell</code> will probably waste time, mind effort and it's error prone. <code>Field</code> is much clearer for both parties.</p>
+<h3 id="implementation">Implementation</h3>
+<p>After this short warm-up, we will make sure to name things in a way that everyone quickly understands what is meant.</p>
+<p>A <code>Field</code> can be taken or not. So, how about this?</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Field {
+    taken: </span><span style="font-weight:bold;color:#a71d5d;">bool
+</span><span style="color:#323232;">}
+</span></code></pre>
+<p>With that we would know that a <code>Field</code> is taken, but not by which player / which mark (X or O).</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub type </span><span style="color:#323232;">Mark </span><span style="font-weight:bold;color:#a71d5d;">= char</span><span style="color:#323232;">;
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Field {
+    mark: </span><span style="color:#0086b3;">Option</span><span style="color:#323232;">&lt;Mark&gt;
+}
+</span></code></pre>
+<p>That's better. Now it <strong>can</strong> be marked with <strong>any</strong> character, including X and O. But the game is called X-O so we should make sure, that only those can be picked:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">#[derive(Clone, Copy, Eq, PartialEq)]
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Mark {
+    X,
+    O
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Field {
+    mark: </span><span style="color:#0086b3;">Option</span><span style="color:#323232;">&lt;Mark&gt;
+}
+</span></code></pre>
+<p>Yeah, that's it. And while doing so we introduced our first Value-Object <code>Mark</code> and our first Entity-Object <code>Field</code>.</p>
+<h4 id="value-object-entity-object">Value-Object / Entity-Object</h4>
+<p>&quot;What are those?&quot; you may ask. Well, let's briefly explain these terms:</p>
+<p><a href="https://martinfowler.com/">Martin Fowler</a> describes a <strong>Value-Object</strong> as</p>
+<blockquote>
+[...]
+Small objects, such as points, monies, or ranges, are good examples of value objects. But larger structures can often be programmed as value objects if they don't have any conceptual identity or don't need share references around a program.
+[...]
+</blockquote>
+<p><a href="https://martinfowler.com/bliki/ValueObject.html">Martin Fowler: ValueObject</a></p>
+<p>That is more or less the definition for both, <code>Mark</code> and <code>Field</code>, right? Nope. Because of &quot;if they don't have any conceptual identity&quot; part, we have to distinguish them. <code>Field</code> has a &quot;conceptual identity&quot;.
+According to Martin Fowler, the difference between <strong>Value-Objects</strong> and <strong>Entity-Objects</strong> is</p>
+<blockquote>
+[...]
+<strong>Entity</strong>: Objects that have a distinct identity that runs through time and different representations. You also hear these called "reference objects".
+[...]
+</blockquote>
+<p><a href="https://martinfowler.com/bliki/EvansClassification.html">Martin Fowler: EvansClassification</a></p>
+<blockquote>
+[...]
+<strong>Value Object</strong>: Objects that matter only as the combination of their attributes. Two value objects with the same values for all their attributes are considered equal.
+[...]
+</blockquote>
+<p><a href="https://martinfowler.com/bliki/EvansClassification.html">Martin Fowler: EvansClassification</a></p>
+<p>So, <code>Field</code> is an Entity because it will change and even if two <code>Field</code>s have the same <code>Mark</code> we  still have to consider them different because they represent different <code>Field</code>s in different locations.
+A <code>Mark</code> on the other hand is just a value and <code>Mark::X</code> is and will always be the same.</p>
+<hr />
+<p>Now that that's covered, we need a way to display the individual <code>Mark</code> with either <code>X</code> or <code>O</code> and give the <code>Field</code> some way to express if it's marked and if so, with what:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">std::fmt::Display </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">Mark {
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">fmt</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, f: </span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">std::fmt::Formatter) -&gt; std::fmt::Result {
+        </span><span style="font-weight:bold;color:#a71d5d;">match </span><span style="color:#323232;">self {
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::X </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#323232;">write!(f, </span><span style="color:#183691;">&quot;X&quot;</span><span style="color:#323232;">),
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::O </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#323232;">write!(f, </span><span style="color:#183691;">&quot;O&quot;</span><span style="color:#323232;">),
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Field {
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">is_marked</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">bool </span><span style="color:#323232;">{
+        self.mark.</span><span style="color:#62a35c;">is_some</span><span style="color:#323232;">()
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">is_marked_with</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, mark: Mark) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">bool </span><span style="color:#323232;">{
+        </span><span style="font-weight:bold;color:#a71d5d;">if let </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(m) </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.mark {
+            mark </span><span style="font-weight:bold;color:#a71d5d;">==</span><span style="color:#323232;"> m
+        } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">false
+        </span><span style="color:#323232;">}
+    }
+}
+</span></code></pre>
+<p>So far, so good. Next we have to assemble those <code>Field</code>s in a 3x3 grid. And again: do we call it <code>Grid</code> or something better? A <code>Grid</code> is a bit clearer than <code>Cell</code> vs <code>Field</code> was, but is it good enough? If we play with random people, we won't call it <code>Grid</code>. Maybe <code>Playground</code>?</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub type </span><span style="color:#323232;">Pixel </span><span style="font-weight:bold;color:#a71d5d;">= usize</span><span style="color:#323232;">;
+
+</span><span style="font-weight:bold;color:#a71d5d;">const </span><span style="color:#0086b3;">DIMENSION</span><span style="color:#323232;">: Pixel </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#0086b3;">3</span><span style="color:#323232;">;
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Playground {
+    field: [Field; DIMENSION * DIMENSION]
+}
+</span></code></pre>
+<p>And here we introduced our second Entity-Object: <code>Playground</code>.
+Now that this has been taken care of, let's speak about the arrangement of our fields and how we access them later. Our 1D 3x3 <code>Playground</code> will later be displayed as a 2D coordinate system like this:</p>
+<p><img src="https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/tik-take-toe-coord.png" alt="Tik-Tak-Toe" /></p>
+<p>So we have a x and y axis (we could also name it <code>row</code> and <code>column</code>) which can be transformed into an 1D index if we know the size with:</p>
+<p><code>y * PLAYGROUND_SIZE + x</code></p>
+<p>In Rust:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">#[derive(Debug, PartialEq, Eq)]
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">PixelCoord {
+    x: Pixel,
+    y: Pixel
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">PixelCoord {
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">index</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; Pixel {
+        self.y </span><span style="font-weight:bold;color:#a71d5d;">* </span><span style="color:#0086b3;">DIMENSION </span><span style="font-weight:bold;color:#a71d5d;">+ </span><span style="color:#323232;">self.x
+    }
+}
+</span></code></pre>
+<p>With this we can equip our <code>Playground</code> with the helpful methods <code>is_field_occupied</code> and <code>mark_field_with</code> which both use a <code>PixelCoord</code> to calculate the index:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">#[derive(Debug)]
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">FieldError {
+    NoFieldAt(Pixel),
+    Occupied(Pixel)
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Playground {
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">is_field_occupied</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, coord: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">PixelCoord) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">bool </span><span style="color:#323232;">{
+        </span><span style="font-weight:bold;color:#a71d5d;">if let </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(field) </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.fields.</span><span style="color:#62a35c;">get</span><span style="color:#323232;">(coord.</span><span style="color:#62a35c;">index</span><span style="color:#323232;">()) {
+            field.</span><span style="color:#62a35c;">is_marked</span><span style="color:#323232;">()
+        } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">false
+        </span><span style="color:#323232;">}
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">mark_field_with</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self, coord: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">PixelCoord, mark: Mark) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;(), FieldError&gt; {
+        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> index </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> coord.</span><span style="color:#62a35c;">index</span><span style="color:#323232;">();
+        </span><span style="font-weight:bold;color:#a71d5d;">if let </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(field) </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.fields.</span><span style="color:#62a35c;">get_mut</span><span style="color:#323232;">(index) {
+            </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> field.</span><span style="color:#62a35c;">is_marked</span><span style="color:#323232;">() {
+                </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(FieldError::Occupied(index))
+            } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+                field.mark </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(mark);
+                </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(())
+            }
+        } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(FieldError::NoFieldAt(index))
+        }
+    }
+}
+</span></code></pre>
+<p>What's left are the Players. A <code>Player</code> needs a name, the mark he'll choose and probably some sort of playing strategy. A human player will be asked to type where they want to set their mark, but if we play against a bot, we have to use another strategy. But let's focus first on his name and <code>Mark</code>. So here we go:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Player {
+    name: String,
+    mark: Mark
+}
+</span></code></pre>
+<p>Simple, right? Maybe too simple. We might have to check if <code>name</code> is not empty, not too short / not too long. So in DDD manner we should use a Value-Object:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">#[derive(Debug)]
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">NameError {
+    TooLong(</span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">),
+    TooShort(</span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">)
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">const </span><span style="color:#0086b3;">MIN_NAME_LEN</span><span style="color:#323232;">: </span><span style="font-weight:bold;color:#a71d5d;">usize = </span><span style="color:#0086b3;">3</span><span style="color:#323232;">;
+</span><span style="font-weight:bold;color:#a71d5d;">const </span><span style="color:#0086b3;">MAX_NAME_LEN</span><span style="color:#323232;">: </span><span style="font-weight:bold;color:#a71d5d;">usize = </span><span style="color:#0086b3;">60</span><span style="color:#323232;">;
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Name(String);
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">std::fmt::Display </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">Name {
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">fmt</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, f: </span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">std::fmt::Formatter) -&gt; std::fmt::Result {
+        write!(f, </span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">, self.</span><span style="color:#0086b3;">0</span><span style="color:#323232;">)
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">TryFrom&lt;</span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">&gt; </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">Name {
+    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Error </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> NameError;
+
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">try_from</span><span style="color:#323232;">(s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">, NameError&gt; {
+        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> s </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">trim</span><span style="color:#323232;">();
+        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> len </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">len</span><span style="color:#323232;">();
+
+        </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> len </span><span style="font-weight:bold;color:#a71d5d;">&lt; </span><span style="color:#0086b3;">MIN_NAME_LEN </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(NameError::TooShort(len))
+        } </span><span style="font-weight:bold;color:#a71d5d;">else if</span><span style="color:#323232;"> len </span><span style="font-weight:bold;color:#a71d5d;">&gt; </span><span style="color:#0086b3;">MAX_NAME_LEN </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(NameError::TooLong(len))
+        } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">(s.</span><span style="color:#62a35c;">to_string</span><span style="color:#323232;">()))
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Player {
+    name: Name,
+    mark: Mark
+}
+</span></code></pre>
+<p>Another runtime check which was taken care of by wrapping it in it's own type, great! But we have another problem: Nothing prevents us from doing</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> player_1 </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> Player { name: </span><span style="color:#183691;">&quot;Foo&quot;</span><span style="color:#323232;">.</span><span style="color:#62a35c;">try_into</span><span style="color:#323232;">()</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">, mark: Mark::X };
+</span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> player_2 </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> Player { name: </span><span style="color:#183691;">&quot;Bar&quot;</span><span style="color:#323232;">.</span><span style="color:#62a35c;">try_into</span><span style="color:#323232;">()</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">, mark: Mark::X };
+</span></code></pre>
+<p>Both players can use the same <code>Mark</code>! It could just be a copy-paste error or a typo, but it's still error prone. Let's think of another approach. Regarding the alternative name &quot;X-O&quot; we just have two options: either you choose X or O. So let's wrap that up in another Value-Object:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Player {
+    X(Name),
+    O(Name)
+}
+</span></code></pre>
+<p>Now we have both, <code>Mark::X</code> and <code>Player::X</code> and the same goes for &quot;O&quot;. Should we change our <code>Field</code> structure too?</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Field {
+    mark: </span><span style="color:#0086b3;">Option</span><span style="color:#323232;">&lt;Player&gt;
+}
+</span></code></pre>
+<p>Well, with that a <code>Field</code> could <strong>own</strong> a player which seems kinda wrong..</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Field&lt;</span><span style="font-weight:bold;color:#a71d5d;">&#39;a</span><span style="color:#323232;">&gt; {
+    marked_by: </span><span style="color:#0086b3;">Option</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> Player&gt;
+}
+</span></code></pre>
+<p>That's better, it can borrow a <code>Player</code>. But that doesn't seem right, does it? Why should a <code>Field</code> know which player has marked it? If we go with this <code>Field</code> - <code>Player</code> relationship it should be reversed: The player should know his <code>Field</code>'s but not the other way around. Thinking again, we should just stick with our old approach:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Field {
+    mark: </span><span style="color:#0086b3;">Option</span><span style="color:#323232;">&lt;Mark&gt;
+}
+</span></code></pre>
+<p>Even if X and O are doubled, <code>Player</code> and <code>Field</code> stays decoupled which is way more important.</p>
+<p>What's left is the different strategies we'll use. We could use a <code>trait</code> or <code>interface</code> as it's called in other languages:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">PositionStrategy {
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_position</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; PixelCoord;
+}
+</span></code></pre>
+<p>Now we have different ways how to &quot;tell&quot; the Player, which strategy he'll use. First with a generic type information:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Player&lt;&#39;a, S: PositionStrategy&gt; {
+    X(Name, S),
+    O(Name, S)
+}
+</span></code></pre>
+<p>or by using dynamic dispatch binding:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Player&lt;&#39;a&gt; {
+    X(Name, </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> dyn PositionStrategy),
+    O(Name, </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> dyn PositionStrategy)
+}
+</span></code></pre>
+<p>One problem with the first approach is, that the generic has to be declared in every struct that holds a <code>Player</code>. So variant #2 seems a bit more &quot;low-noise&quot;. Let's improve it by using fields:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Player&lt;&#39;a&gt; {
+    X {
+        name: Name,
+        strategy: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> dyn PositionStrategy
+    },
+    O {
+        name: Name,
+        strategy: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> dyn PositionStrategy
+    },
+}
+</span></code></pre>
+<p>But this is a bit redundant, so why not use this?</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Player&lt;</span><span style="font-weight:bold;color:#a71d5d;">&#39;a</span><span style="color:#323232;">&gt; {
+    name: Name,
+    strategy: </span><span style="font-weight:bold;color:#a71d5d;">&amp;&#39;a</span><span style="color:#323232;"> dyn PositionStrategy
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Mark&lt;&#39;a&gt; {
+    X(Player&lt;</span><span style="font-weight:bold;color:#a71d5d;">&#39;a</span><span style="color:#323232;">&gt;),
+    O(Player&lt;</span><span style="font-weight:bold;color:#a71d5d;">&#39;a</span><span style="color:#323232;">&gt;),
+}
+</span></code></pre>
+<p>This approach is still bothering me, maybe we're over-engineering it. Let's take a step back. If we think carefully, we only have two options: either it's a human player which will be asked for his choice or it's a KI which will place it's mark with a certain strategy. But either way, it stays the same for each human that plays and for each KI. So, how about this?</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Player {
+    Human {
+        name: Name
+    },
+    </span><span style="color:#0086b3;">KI
+</span><span style="color:#323232;">}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Marker {
+    X(Player),
+    O(Player)
+}
+</span></code></pre>
+<p><strong>Two problems remain</strong>:</p>
+<ul>
+<li>We still can assign the same player to X and O. But that may be intentional, since two people can have the same name and the perspective of two bots playing against each other also sounds exciting.</li>
+<li>We now can assign X or O twice (because of the type <code>Marker</code>) and must pay attention to it at runtime. We should make X and O to be their very own types:</li>
+</ul>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">X {
+    player: Player
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">O {
+    player: Player
+}
+</span></code></pre>
+<p>But we still need some kind of generic representation for a <code>Mark</code> so that we can treat both with the same logic:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">Marker {
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_mark</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; Mark;
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">X {
+    player: Player
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Marker </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">X {
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_mark</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; Mark {
+        Mark::X
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">O {
+    player: Player
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Marker </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">O {
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_mark</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; Mark {
+        Mark::O
+    }
+}
+</span></code></pre>
+<p>So far, so good. What's missing?</p>
+<ul>
+<li>how the user-input is accepted and converted</li>
+<li>how we decide if X or O has won</li>
+<li>the alternating game play between X and O</li>
+<li>the display of our game play</li>
+</ul>
+<h3 id="directions">Directions</h3>
+<p>Let's start with directions. For now, our simple KI can output just random coordinates which - if they aren't taken already - will be marked. Later we could introduce a smarter solution, but that will not be covered by this post. So, let's talk about how the human player is inserting his choice. We have 9 fields from <em>top-left</em> to <em>bottom-right</em>. We can express each of those 9 fields by combining 5 directions:</p>
+<ul>
+<li>top</li>
+<li>left</li>
+<li>center</li>
+<li>bottom</li>
+<li>right</li>
+</ul>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Direction {
+    Top,
+    Bottom,
+    Left,
+    Right,
+    Center
+}
+</span></code></pre>
+<p>Of course, only certain combinations make sense. <code>top-left</code> is perfectly fine, but <code>top-bottom</code> is not. Since we're dealing with external input, we should better be safe than sorry about how careful we parse it.</p>
+<p><img src="https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/tik-take-toe-directions.png" alt="Tik-Tak-Toe" /></p>
+<p>If the player inserts &quot;center-right&quot; we want the coordinate <code>2 / 1</code> or in other words the index <code>1 * 3 + 2 = 5</code></p>
+<p>Since we're dealing with a 2 dimensional point of view, we should revise our early implementation of the coordinate-system. Instead of a fixed <code>PixelCoord</code> we could use a few more abstractions:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Coord&lt;T&gt; {
+    x: T,
+    y: T,
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub type </span><span style="color:#323232;">PixelCoord </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">Coord&lt;Pixel&gt;;
+</span><span style="font-weight:bold;color:#a71d5d;">pub type </span><span style="color:#323232;">DirectionCoord </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">Coord&lt;Direction&gt;;
+</span></code></pre>
+<p><small>In DDD both of them would be Value-Objects.</small></p>
+<p>To parse an input like <code>top-left</code> we have to split the hyphen and parse both words as single <code>Direction</code>s. If the string does not contain a hyphen, only &quot;center&quot; is a valid input. If there's a hyphen, there can only be one, which separates the two directions:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">#[derive(Debug, PartialEq, Eq)]
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">DirectionError {
+    TooManyParts,
+    UnknownDirection
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">TryFrom&lt;</span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">&gt; </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">DirectionCoord {
+    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Error </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> DirectionError;
+
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">try_from</span><span style="color:#323232;">(s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">, </span><span style="font-weight:bold;color:#a71d5d;">Self::</span><span style="color:#323232;">Error&gt; {
+        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> s </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">trim</span><span style="color:#323232;">().</span><span style="color:#62a35c;">to_ascii_lowercase</span><span style="color:#323232;">();
+        </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">contains</span><span style="color:#323232;">(</span><span style="color:#183691;">&#39;-&#39;</span><span style="color:#323232;">) {
+            </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> parts </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">split</span><span style="color:#323232;">(</span><span style="color:#183691;">&#39;-&#39;</span><span style="color:#323232;">);
+            </span><span style="font-weight:bold;color:#a71d5d;">match </span><span style="color:#323232;">(parts.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">(), parts.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">(), parts.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">()) {
+                (</span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(dx), </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(dy), </span><span style="color:#0086b3;">None</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(DirectionCoord {
+                    x: Direction::parse_str(dx)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">,
+                    y: Direction::parse_str(dy)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">,
+                }),
+                </span><span style="font-weight:bold;color:#a71d5d;">_ =&gt; </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(DirectionError::TooManyParts),
+            }
+        } </span><span style="font-weight:bold;color:#a71d5d;">else if</span><span style="color:#323232;"> s </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#183691;">&quot;center&quot; </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">Ok </span><span style="color:#323232;">(DirectionCoord { x: Direction::Center, y: Direction::Center })
+        } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(DirectionError::UnknownDirection)
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Direction {
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">parse_str</span><span style="color:#323232;">(s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">, DirectionError&gt; {
+        </span><span style="font-weight:bold;color:#a71d5d;">match</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">trim</span><span style="color:#323232;">().</span><span style="color:#62a35c;">to_ascii_lowercase</span><span style="color:#323232;">().</span><span style="color:#62a35c;">as_ref</span><span style="color:#323232;">() {
+            </span><span style="color:#183691;">&quot;top&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Top),
+            </span><span style="color:#183691;">&quot;bottom&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Bottom),
+            </span><span style="color:#183691;">&quot;left&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Left),
+            </span><span style="color:#183691;">&quot;right&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Right),
+            </span><span style="color:#183691;">&quot;center&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Center),
+            </span><span style="font-weight:bold;color:#a71d5d;">_ =&gt; </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(DirectionError),
+        }
+    }
+}
+</span></code></pre>
+<p>But we would still accept invalid inputs like &quot;top-bottom&quot; you might say. And you're right! <code>Direction</code> is not expressive enough: we cannot distinguish between <code>Row</code> directions like left, right, center and <code>Column</code> directions like top, bottom, center. So let's split things up:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">#[derive(Debug, PartialEq, Eq)]
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">DirectionError {
+    TooManyParts,
+    UnknownDirection,
+    UnknownRow,
+    UnknownColumn
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Row {
+    Left, Right, Center
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Row {
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">parse_str</span><span style="color:#323232;">(s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">, DirectionError&gt; {
+        </span><span style="font-weight:bold;color:#a71d5d;">match</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">trim</span><span style="color:#323232;">().</span><span style="color:#62a35c;">to_ascii_lowercase</span><span style="color:#323232;">().</span><span style="color:#62a35c;">as_ref</span><span style="color:#323232;">() {
+            </span><span style="color:#183691;">&quot;left&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Left),
+            </span><span style="color:#183691;">&quot;right&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Right),
+            </span><span style="color:#183691;">&quot;center&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Center),
+            </span><span style="font-weight:bold;color:#a71d5d;">_ =&gt; </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(DirectionError::UnknownRow),
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Column {
+    Top, Bottom, Center
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Column {
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">parse_str</span><span style="color:#323232;">(s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">, DirectionError&gt; {
+        </span><span style="font-weight:bold;color:#a71d5d;">match</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">trim</span><span style="color:#323232;">().</span><span style="color:#62a35c;">to_ascii_lowercase</span><span style="color:#323232;">().</span><span style="color:#62a35c;">as_ref</span><span style="color:#323232;">() {
+            </span><span style="color:#183691;">&quot;top&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Top),
+            </span><span style="color:#183691;">&quot;bottom&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Bottom),
+            </span><span style="color:#183691;">&quot;center&quot; </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Center),
+            </span><span style="font-weight:bold;color:#a71d5d;">_ =&gt; </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(DirectionError::UnknownColumn),
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">parse_direction</span><span style="color:#323232;">(s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;(Row, Column), DirectionError&gt; {
+    </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> s </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">trim</span><span style="color:#323232;">().</span><span style="color:#62a35c;">to_ascii_lowercase</span><span style="color:#323232;">();
+    </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">contains</span><span style="color:#323232;">(</span><span style="color:#183691;">&#39;-&#39;</span><span style="color:#323232;">) {
+        </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> parts </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> s.</span><span style="color:#62a35c;">split</span><span style="color:#323232;">(</span><span style="color:#183691;">&#39;-&#39;</span><span style="color:#323232;">);
+        </span><span style="font-weight:bold;color:#a71d5d;">match </span><span style="color:#323232;">(parts.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">(), parts.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">(), parts.</span><span style="color:#62a35c;">next</span><span style="color:#323232;">()) {
+            </span><span style="font-style:italic;color:#969896;">// if you enter e.g. &quot;center-left&quot;
+            </span><span style="color:#323232;">(</span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(first_part), </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(second_part), </span><span style="color:#0086b3;">None</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">=&gt; match </span><span style="color:#323232;">(Row::parse_str(second_part), Column::parse_str(first_part)) {
+                (</span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(row), </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(column)) </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">((row, column)),
+                </span><span style="font-style:italic;color:#969896;">// if you enter e.g. &quot;left-center&quot;
+                </span><span style="font-weight:bold;color:#a71d5d;">_ =&gt; </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">((Row::parse_str(first_part)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">, Column::parse_str(second_part)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">)),
+            },
+            </span><span style="font-weight:bold;color:#a71d5d;">_ =&gt; </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(DirectionError::TooManyParts),
+        }
+    } </span><span style="font-weight:bold;color:#a71d5d;">else if</span><span style="color:#323232;"> s </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#183691;">&quot;center&quot; </span><span style="color:#323232;">{
+        </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">((Row::Center, Column::Center))
+    } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+        </span><span style="color:#0086b3;">Err</span><span style="color:#323232;">(DirectionError::UnknownDirection)
+    }
+}
+</span></code></pre>
+<p>Much better. Not only would an input like &quot;top-bottom&quot; now be a <code>DirectionError</code>, we also don't have to revise the implementation of our coordinate-system. And we made it more intuitive by accepting different (but still valid) combinations as <em>center-left</em> <strong>and</strong> <em>left-center</em>.</p>
+<p>Now that we can translate user input into a <code>Row</code> and a <code>Column</code>, we need a way to convert those to <code>PixelCoord</code>inates:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Row {
+    </span><span style="font-style:italic;color:#969896;">// parse_str
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">as_pixel</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; Pixel {
+        </span><span style="font-weight:bold;color:#a71d5d;">match </span><span style="color:#323232;">self {
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Left </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">0</span><span style="color:#323232;">,
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Center </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">1</span><span style="color:#323232;">,
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Right </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">2</span><span style="color:#323232;">,
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Column {
+    </span><span style="font-style:italic;color:#969896;">// parse_str
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">as_pixel</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; Pixel {
+        </span><span style="font-weight:bold;color:#a71d5d;">match </span><span style="color:#323232;">self {
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Top </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">0</span><span style="color:#323232;">,
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Center </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">1</span><span style="color:#323232;">,
+            </span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">::Bottom </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#0086b3;">2</span><span style="color:#323232;">,
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">TryFrom&lt;</span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">&gt; </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">PixelCoord {
+    </span><span style="font-weight:bold;color:#a71d5d;">type </span><span style="color:#323232;">Error </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> DirectionError;
+
+    </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">try_from</span><span style="color:#323232;">(s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) -&gt; </span><span style="color:#0086b3;">Result</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">Self</span><span style="color:#323232;">, </span><span style="font-weight:bold;color:#a71d5d;">Self::</span><span style="color:#323232;">Error&gt; {
+        </span><span style="font-weight:bold;color:#a71d5d;">let </span><span style="color:#323232;">(row, column) </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#62a35c;">parse_direction</span><span style="color:#323232;">(s)</span><span style="font-weight:bold;color:#a71d5d;">?</span><span style="color:#323232;">;
+
+        </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(PixelCoord {
+            x: row.</span><span style="color:#62a35c;">as_pixel</span><span style="color:#323232;">(),
+            y: column.</span><span style="color:#62a35c;">as_pixel</span><span style="color:#323232;">(),
+        })
+    }
+}
+</span></code></pre><h3 id="winning">Winning</h3>
+<p>Initially we quoted that the game is won &quot;if you can place three of your marks
+in a horizontal, diagonal or vertical row&quot;. It's easy to see that as a Human,
+but it's not that obvious for a program.
+We could iterate twice (for each player) through each column, row and of course diagonally and check, if it's filled with X or O. Another approach would be to fill all of the <code>Field</code>s with powers of 2 from 0 onwards: <code>2⁰</code>, <code>2¹</code>, <code>2²</code> and so on from top-left to bottom-right row by row:</p>
+<p><img src="https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/tik-take-toe-2-pow.png" alt="" /></p>
+<p>Which translates to</p>
+<p><img src="https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/tik-take-toe-pow-2.png" alt="" /></p>
+<p>If we add the numbers in each row, column and diagonally (from top-left to bottom-right and top-right to bottom-left) we get this:</p>
+<p><img src="https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/tik-take-toe-win.png" alt="" /></p>
+<p>All in all we get 8 (3 <code>Row</code>s + 3 <code>Column</code>s + 2 diagonal) possible winning scores:</p>
+<p><code>7, 56, 73, 84, 146, 273, 292, 448</code></p>
+<p>With that in mind, we can iterate twice (once per <code>Player</code>) through all <code>Field</code>s. If the current <code>Field</code> is marked by the <code>Player</code> we'll add <code>2^i</code> to a counter variable, where <code>i</code> is the index of the <code>Field</code> (<code>i</code> is <code>&gt;=</code> 0 and <code>&lt;=</code> 8). If the calculated score for that <code>Player</code> is &quot;within&quot; the <code>WINNING_SCORES</code>, he has won.</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">const </span><span style="color:#0086b3;">WINNING_SCORES</span><span style="color:#323232;">: [</span><span style="font-weight:bold;color:#a71d5d;">usize</span><span style="color:#323232;">; </span><span style="color:#0086b3;">8</span><span style="color:#323232;">] </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">[</span><span style="color:#0086b3;">7</span><span style="color:#323232;">, </span><span style="color:#0086b3;">56</span><span style="color:#323232;">, </span><span style="color:#0086b3;">73</span><span style="color:#323232;">, </span><span style="color:#0086b3;">84</span><span style="color:#323232;">, </span><span style="color:#0086b3;">146</span><span style="color:#323232;">, </span><span style="color:#0086b3;">273</span><span style="color:#323232;">, </span><span style="color:#0086b3;">292</span><span style="color:#323232;">, </span><span style="color:#0086b3;">448</span><span style="color:#323232;">];
+</span><span style="font-weight:bold;color:#a71d5d;">const </span><span style="color:#0086b3;">WINNING_SCORE_BASE</span><span style="color:#323232;">: </span><span style="font-weight:bold;color:#a71d5d;">usize = </span><span style="color:#0086b3;">2</span><span style="color:#323232;">;
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Playground {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">has_won</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, mark: Mark) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">bool </span><span style="color:#323232;">{
+        </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> score: </span><span style="font-weight:bold;color:#a71d5d;">usize = </span><span style="color:#323232;">self.fields.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">().</span><span style="color:#62a35c;">map</span><span style="color:#323232;">(|(index, field)| </span><span style="font-weight:bold;color:#a71d5d;">if</span><span style="color:#323232;"> field.</span><span style="color:#62a35c;">is_marked_with</span><span style="color:#323232;">(mark) {
+            </span><span style="color:#0086b3;">WINNING_SCORE_BASE</span><span style="color:#323232;">.</span><span style="color:#62a35c;">pow</span><span style="color:#323232;">(index </span><span style="font-weight:bold;color:#a71d5d;">as u32</span><span style="color:#323232;">)
+        } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+            </span><span style="color:#0086b3;">0
+        </span><span style="color:#323232;">}).</span><span style="color:#62a35c;">sum</span><span style="color:#323232;">();
+
+        </span><span style="color:#0086b3;">WINNING_SCORES</span><span style="color:#323232;">.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">any</span><span style="color:#323232;">(|winning_score| (winning_score </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;"> score) </span><span style="font-weight:bold;color:#a71d5d;">== *</span><span style="color:#323232;">winning_score)
+    }
+}
+</span></code></pre>
+<hr />
+<p>We've said &quot;within&quot;, but what <em>exactly</em> is <code>(winning_score &amp; score) == winning_score</code> doing?
+Let's imagine we've marked all <code>Field</code>s in the first row and the first <code>Field</code> of the second row. So our score would be <code>1 + 2 + 4 + 8 = 15</code>. Now we iterate through all <code>WINNING_SCORES</code> and stop as soon as we find a match which indicates that we've won. The first <code>winning_score</code> is 7. 7 in it's bit-representation is <code>0111</code>. Our <code>score</code> 15 as bit-representation is <code>1111</code>. If we do 7 &amp; 15 we compare each of the bits one by one and put down a 1 if both bits are 1 and 0 otherwise. So we get this:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="color:#323232;">0111
+1111
+----
+0111
+</span></code></pre>
+<p>which is 7 again and since 7 is equal to 7 =&gt; we've found a match which means the <code>Player</code> has won!</p>
+<hr />
+<h3 id="alternating-between-x-and-o">Alternating between X and O</h3>
+<p>At the start of this Post we wrote that &quot;both players take turns&quot;. That should be easy, right? Like in reality, we could just &quot;remember&quot; whoever took the last turn:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Playground {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    // To avoid dead-locks and therefore endless loops
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">is_full</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">bool </span><span style="color:#323232;">{
+        self.fields.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">all</span><span style="color:#323232;">(|field| field.</span><span style="color:#62a35c;">is_marked</span><span style="color:#323232;">())
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub enum </span><span style="color:#323232;">Turn {
+    X,
+    O
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Game {
+    playground: Playground,
+    x: X,
+    o: O,
+    turn: Turn
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Game {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">play</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self) {
+        </span><span style="font-weight:bold;color:#a71d5d;">loop </span><span style="color:#323232;">{
+            </span><span style="font-weight:bold;color:#a71d5d;">let </span><span style="color:#323232;">(pos, mark) </span><span style="font-weight:bold;color:#a71d5d;">= match </span><span style="color:#323232;">self.turn {
+                Turn::X </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#323232;">{
+                    self.turn </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">Turn::O; </span><span style="font-style:italic;color:#969896;">// &lt;-- Here we reverse it
+                    </span><span style="color:#323232;">(self.</span><span style="color:#62a35c;">get_x_position</span><span style="color:#323232;">(), Mark::X)
+                },
+                Turn::O </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#323232;">{
+                    self.turn </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">Turn::X; </span><span style="font-style:italic;color:#969896;">// &lt;-- Here we reverse it
+                    </span><span style="color:#323232;">(self.</span><span style="color:#62a35c;">get_y_position</span><span style="color:#323232;">(), Mark::O)
+                }
+            };
+
+            self.playground.</span><span style="color:#62a35c;">mark_field_with</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">pos, mark);
+            </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">has_won</span><span style="color:#323232;">(mark) {
+                </span><span style="font-weight:bold;color:#a71d5d;">break</span><span style="color:#323232;">;
+            }
+        }
+    }
+
+    </span><span style="font-style:italic;color:#969896;">// ...
+</span><span style="color:#323232;">}
+</span></code></pre>
+<p>Yay, we've got us another X-O enum! Did you notice that X O X and O X O pattern in the <code>play</code> method? Looks like some sort of emoticon. At least for me, that solution looks a bit confusing and error prone. Could it be that we are over-engineering to save minor code duplicates? Lets follow the <a href="https://en.wikipedia.org/wiki/KISS_principle">KISS principle</a>. We could just place the marks one after another:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Game {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">play</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self) {
+        </span><span style="font-weight:bold;color:#a71d5d;">loop </span><span style="color:#323232;">{
+            </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">is_full</span><span style="color:#323232;">() {
+                </span><span style="font-style:italic;color:#969896;">// TODO: Tell us that it&#39;s a draw
+                </span><span style="font-weight:bold;color:#a71d5d;">break</span><span style="color:#323232;">;
+            }
+
+            </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> pos </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.</span><span style="color:#62a35c;">get_x_position</span><span style="color:#323232;">();
+            self.playground.</span><span style="color:#62a35c;">mark_field_with</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">pos, Mark::X);
+            </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">has_won</span><span style="color:#323232;">(Mark::X) {
+                </span><span style="font-style:italic;color:#969896;">// TODO: Tell us that &quot;X&quot; has won
+                </span><span style="font-weight:bold;color:#a71d5d;">break</span><span style="color:#323232;">;
+            }
+
+            </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> pos </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.</span><span style="color:#62a35c;">get_o_position</span><span style="color:#323232;">();
+            self.playground.</span><span style="color:#62a35c;">mark_field_with</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">pos, Mark::O);
+            </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">has_won</span><span style="color:#323232;">(Mark::O) {
+                </span><span style="font-style:italic;color:#969896;">// TODO: Tell us that &quot;O&quot; has won
+                </span><span style="font-weight:bold;color:#a71d5d;">break</span><span style="color:#323232;">;
+            }
+        }
+    }
+}
+</span></code></pre>
+<p>The <code>play</code> method has the same <a href="https://en.wikipedia.org/wiki/Source_lines_of_code">SLOC</a> as before and it's much easier to grasp isn't it? And we can remove that <code>Turn</code> enum and the <code>turn</code> property in <code>Game</code>!</p>
+<h2 id="part-2-ddd">Part 2: DDD</h2>
+<p><strong>D</strong>omain-<strong>D</strong>riven-<strong>D</strong>esign distinguishes between three layers:</p>
+<ul>
+<li>The Domain-Layer, where our business logic lives</li>
+<li>The Infrastructure-Layer, for concrete infrastructure implementation</li>
+<li>The Application-Layer, where everything get's coordinated</li>
+</ul>
+<p>Let's split it up:</p>
+<h3 id="the-application-layer">The Application-Layer</h3>
+<p>The application layer is the place were the components live, which are using and orchestrating other components. In DDD the application layer is only using components from itself or from the domain layer. Why not from the infrastructure layer you're asking? Well, we will speak about that shortly. So, which of the given components could be described as using and orchestrating other components? Right, just <code>Game</code>. So that's our only application layer component for now.</p>
+<h3 id="the-domain-layer">The Domain-Layer</h3>
+<p>Here we will place our entire business logic, expressed through a company-wide ubiquitous language.
+An ubiquitous language is a Must-Have. If your speaking about <code>Client</code>s but name them <code>User</code> in the code, you introduce confusion for all eternity. So, what of our current implementation is domain logic? Well, almost everything except <code>Game</code> as we've determined before.</p>
+<h3 id="the-infrastructure-layer">The Infrastructure-Layer</h3>
+<p>Remember that we want to ask the <code>Player</code> in which row /column he wants to place his mark? And that we want to tell everyone who has won? We haven't written that piece of code yet. And that's infrastructure specific. Neither the domain nor the application layer should care where the input comes from or is written to. They should only know that it is somehow possible. The where and how is implemented in it's own layer, which is the infrastructure layer.</p>
+<p>Since the domain layer must know that it is somehow possible to write or read something, we define the corresponding <code>interface</code> there. We have different possible solutions.</p>
+<p>We could just implement the behaviour like this:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub mod </span><span style="color:#323232;">domain {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">Display {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self);
+    }
+}
+</span></code></pre><pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub mod </span><span style="color:#323232;">infra {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub mod </span><span style="color:#323232;">terminal {
+        </span><span style="font-weight:bold;color:#a71d5d;">use crate</span><span style="color:#323232;">::domain::{Playground, Field, Display};
+
+        </span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Display </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">Playground {
+            </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) {
+                </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(index, field) </span><span style="font-weight:bold;color:#a71d5d;">in </span><span style="color:#323232;">self.fields.</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">() {
+                    print!(</span><span style="color:#183691;">&quot;[&quot;</span><span style="color:#323232;">);
+                    </span><span style="font-weight:bold;color:#a71d5d;">if let </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">ref</span><span style="color:#323232;"> mark) </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> field.mark {
+                        print!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">, mark);
+                    } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+                        print!(</span><span style="color:#183691;">&quot; &quot;</span><span style="color:#323232;">);
+                    }
+                    print!(</span><span style="color:#183691;">&quot;]&quot;</span><span style="color:#323232;">);
+
+                    </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">(index </span><span style="font-weight:bold;color:#a71d5d;">+ </span><span style="color:#0086b3;">1</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">% </span><span style="color:#0086b3;">3 </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">0 </span><span style="color:#323232;">{
+                        println!(</span><span style="color:#183691;">&quot;&quot;</span><span style="color:#323232;">);
+                    }
+                }
+            }
+        }
+    }
+}
+</span></code></pre>
+<p>Which is somewhat comparable with the abstract factory pattern.
+Or we could use the strategy pattern to inject a concrete strategy:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">pub mod </span><span style="color:#323232;">domain {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">DisplayStrategy {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, field: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Field);
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">Field&lt;S: DisplayStrategy&gt; {
+        </span><span style="font-style:italic;color:#969896;">// ...
+        </span><span style="color:#323232;">strategy: S
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">impl</span><span style="color:#323232;">&lt;S: DisplayStrategy&gt; Field&lt;S&gt; {
+        </span><span style="font-style:italic;color:#969896;">// ...
+
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) {
+            self.strategy.</span><span style="color:#62a35c;">display</span><span style="color:#323232;">(self);
+        }
+    }
+}
+</span></code></pre>
+<p>Both implementations have advantages and disadvantages. But the biggest flaw is, that in both approaches <code>Field</code> (and also <code>Playground</code>) &quot;knows&quot; about the fact, that they somehow can be displayed. Why should a <code>Field</code> have knowledge about that fact? It's not relevant.
+In the last approach the strategy had to accept the <code>Field</code> to display it and the <code>display</code> method in <code>Field</code> just propagated the call to the <code>display</code> of the strategy. Seems a bit meaningless, doesn't it? But we can use that approach and just <em>format</em> the <code>Field</code> / <code>Playground</code> through a external component that get's all necessary information from the <code>Field</code> / <code>Playground</code>. Fair enough, we might need a few getter methods, but we get rid of the needless knowledge that both components are displayable. Another component could then display the string representation. The interfaces are located at the domain layer, since the domain layer needs to know, that the functionality exists, but not how it's implemented:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">mod </span><span style="color:#323232;">domain {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">FieldFormatter {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">format</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, field: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Field) -&gt; String;
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">PlaygroundDisplay {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, playground: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Playground);
+    }
+}
+</span></code></pre>
+<p>The concrete implementation will be located in the infrastructure layer:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">mod </span><span style="color:#323232;">domain {
+    </span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Field {
+        </span><span style="font-style:italic;color:#969896;">// ...
+
+        </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">get_mark</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; </span><span style="color:#0086b3;">Option</span><span style="color:#323232;">&lt;</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Mark&gt; {
+            self.mark.</span><span style="color:#62a35c;">as_ref</span><span style="color:#323232;">()
+        }
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Playground {
+        </span><span style="font-style:italic;color:#969896;">// ...
+
+        </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">get_fields</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">[Field] {
+            self.fields.</span><span style="color:#62a35c;">as_ref</span><span style="color:#323232;">()
+        }
+    }
+}
+
+</span><span style="font-weight:bold;color:#a71d5d;">mod </span><span style="color:#323232;">infra {
+    </span><span style="font-weight:bold;color:#a71d5d;">use crate</span><span style="color:#323232;">::domain::{FieldFormatter, PlaygroundDisplay, Field, Playground};
+
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">BracketFieldFormatter;
+
+    </span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">FieldFormatter </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">BracketFieldFormatter {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">format</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, field: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Field) -&gt; String {
+            </span><span style="font-weight:bold;color:#a71d5d;">if let </span><span style="color:#0086b3;">Some</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">ref</span><span style="color:#323232;"> mark) </span><span style="font-weight:bold;color:#a71d5d;">=</span><span style="color:#323232;"> field.</span><span style="color:#62a35c;">get_mark</span><span style="color:#323232;">() {
+                format!(</span><span style="color:#183691;">&quot;[</span><span style="color:#0086b3;">{}</span><span style="color:#183691;">]&quot;</span><span style="color:#323232;">, mark)
+            } </span><span style="font-weight:bold;color:#a71d5d;">else </span><span style="color:#323232;">{
+                </span><span style="color:#0086b3;">String</span><span style="color:#323232;">::from(</span><span style="color:#183691;">&quot;[ ]&quot;</span><span style="color:#323232;">)
+            }
+        }
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">TerminalPlaygroundDisplay&lt;F: FieldFormatter&gt; {
+        formatter: F
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">impl</span><span style="color:#323232;">&lt;F: FieldFormatter&gt; PlaygroundDisplay </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">TerminalPlaygroundDisplay&lt;F&gt;  {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">display</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, playground: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Playground) {
+            </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">(index, field) </span><span style="font-weight:bold;color:#a71d5d;">in</span><span style="color:#323232;"> playground.</span><span style="color:#62a35c;">get_fields</span><span style="color:#323232;">().</span><span style="color:#62a35c;">iter</span><span style="color:#323232;">().</span><span style="color:#62a35c;">enumerate</span><span style="color:#323232;">() {
+                print!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">, self.formatter.</span><span style="color:#62a35c;">format</span><span style="color:#323232;">(field));
+                </span><span style="font-style:italic;color:#969896;">// One row has 3 fields, so after that we have to start in a new row
+                </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">(index </span><span style="font-weight:bold;color:#a71d5d;">+ </span><span style="color:#0086b3;">1</span><span style="color:#323232;">) </span><span style="font-weight:bold;color:#a71d5d;">% </span><span style="color:#0086b3;">3 </span><span style="font-weight:bold;color:#a71d5d;">== </span><span style="color:#0086b3;">0 </span><span style="color:#323232;">{
+                    println!();
+                }
+            }
+        }
+    }
+}
+</span></code></pre>
+<p>As you can see, the domain layer is completly isolated from the other layers and the infrastrucutre only knows a few interfaces from the domain layer since it's implementing those. All in all we get the following relationships:</p>
+<p><img src="https://dgame.github.io/blog/tik-take-toe-in-rust-in-a-ddd-fashion/ddd.png" alt="" /></p>
+<p><small>DI: <strong>D</strong>ependency <strong>I</strong>njection</small></p>
+<p>But what about asking and reading the <code>Player</code> input?</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">mod </span><span style="color:#323232;">domain {
+    </span><span style="font-style:italic;color:#969896;">// ...
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">Writer {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">writeln</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, s: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">);
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub trait </span><span style="color:#323232;">Reader {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">readln</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; String;
+    }
+}
+</span></code></pre>
+<p>Since we only want to write a simple terminal game, the concrete implementations in the infrastructure layer looks like this:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">mod </span><span style="color:#323232;">infra {
+    </span><span style="font-weight:bold;color:#a71d5d;">use crate</span><span style="color:#323232;">::domain::{Writer, Reader};
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">TerminalWriter;
+
+    </span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Writer </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">TerminalWriter {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">writeln</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, output: </span><span style="font-weight:bold;color:#a71d5d;">&amp;str</span><span style="color:#323232;">) {
+            println!(</span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{}</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">, output);
+        }
+    }
+
+    </span><span style="font-weight:bold;color:#a71d5d;">pub struct </span><span style="color:#323232;">TerminalReader;
+
+    </span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Reader </span><span style="font-weight:bold;color:#a71d5d;">for </span><span style="color:#323232;">TerminalReader {
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">readln</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self) -&gt; String {
+            </span><span style="font-weight:bold;color:#a71d5d;">use </span><span style="color:#323232;">std::io::{self, BufRead};
+
+            </span><span style="font-weight:bold;color:#a71d5d;">let mut</span><span style="color:#323232;"> line </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#0086b3;">String</span><span style="color:#323232;">::new();
+            </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> stdin </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">io::stdin();
+
+            stdin.</span><span style="color:#62a35c;">lock</span><span style="color:#323232;">().</span><span style="color:#62a35c;">read_line</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut</span><span style="color:#323232;"> line).</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;could not read from stdin&quot;</span><span style="color:#323232;">);
+
+            line
+        }
+    }
+}
+</span></code></pre>
+<p>And here's our missing usage of it:</p>
+<pre style="background-color:#ffffff;">
+<code><span style="font-weight:bold;color:#a71d5d;">mod </span><span style="color:#323232;">app {
+    </span><span style="font-weight:bold;color:#a71d5d;">impl </span><span style="color:#323232;">Game {
+        </span><span style="font-style:italic;color:#969896;">// ...
+
+        </span><span style="font-weight:bold;color:#a71d5d;">pub fn </span><span style="font-weight:bold;color:#795da3;">play</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;mut </span><span style="color:#323232;">self) {
+            </span><span style="font-weight:bold;color:#a71d5d;">loop </span><span style="color:#323232;">{
+                </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">is_full</span><span style="color:#323232;">() {
+                    </span><span style="font-style:italic;color:#969896;">// Tell us that it&#39;s a draw
+                    </span><span style="color:#323232;">self.writer.</span><span style="color:#62a35c;">writeln</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;We&#39;ve reached a draw.&quot;</span><span style="color:#323232;">);
+                    </span><span style="font-weight:bold;color:#a71d5d;">break</span><span style="color:#323232;">;
+                }
+
+                </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> pos </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.</span><span style="color:#62a35c;">get_position</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self.x.player);
+                self.playground.</span><span style="color:#62a35c;">mark_field_with</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">pos, Mark::X).</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;Could not mark that field with X&quot;</span><span style="color:#323232;">);
+                </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">has_won</span><span style="color:#323232;">(Mark::X) {
+                    </span><span style="font-style:italic;color:#969896;">// Tell us that &quot;X&quot; has won
+                    </span><span style="color:#323232;">self.writer.</span><span style="color:#62a35c;">writeln</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;X has WON&quot;</span><span style="color:#323232;">);
+                    </span><span style="font-weight:bold;color:#a71d5d;">break</span><span style="color:#323232;">;
+                }
+
+                </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> pos </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.</span><span style="color:#62a35c;">get_position</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self.o.player);
+                self.playground.</span><span style="color:#62a35c;">mark_field_with</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">pos, Mark::O).</span><span style="color:#62a35c;">expect</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;Could not mark that field with O&quot;</span><span style="color:#323232;">);
+                </span><span style="font-weight:bold;color:#a71d5d;">if </span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">has_won</span><span style="color:#323232;">(Mark::O) {
+                    </span><span style="font-style:italic;color:#969896;">// Tell us that &quot;O&quot; has won
+                    </span><span style="color:#323232;">self.writer.</span><span style="color:#62a35c;">writeln</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;O has WON&quot;</span><span style="color:#323232;">);
+                    </span><span style="font-weight:bold;color:#a71d5d;">break</span><span style="color:#323232;">;
+                }
+            }
+        }
+
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">get_position</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, player: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Player) -&gt; PixelCoord {
+            </span><span style="font-weight:bold;color:#a71d5d;">loop </span><span style="color:#323232;">{
+                </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> pos </span><span style="font-weight:bold;color:#a71d5d;">= match</span><span style="color:#323232;"> player {
+                    Player::Human { name } </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#323232;">self.</span><span style="color:#62a35c;">ask_for_direction</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">name),
+                    Player::</span><span style="color:#0086b3;">KI </span><span style="font-weight:bold;color:#a71d5d;">=&gt; </span><span style="color:#323232;">{ </span><span style="font-style:italic;color:#969896;">/* random */ </span><span style="color:#323232;">}
+                };
+
+                </span><span style="font-weight:bold;color:#a71d5d;">if !</span><span style="color:#323232;">self.playground.</span><span style="color:#62a35c;">is_field_occupied</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">pos) {
+                    </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> pos;
+                }
+
+                self.writer.</span><span style="color:#62a35c;">writeln</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;That field is already taken. Please choose another.&quot;</span><span style="color:#323232;">);
+            }
+        }
+
+        </span><span style="font-style:italic;color:#969896;">// This is new!
+        </span><span style="font-weight:bold;color:#a71d5d;">fn </span><span style="font-weight:bold;color:#795da3;">ask_for_direction</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">self, name: </span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">Name) -&gt; PixelCoord {
+            </span><span style="font-weight:bold;color:#a71d5d;">loop </span><span style="color:#323232;">{
+                </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> msg </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">format!(
+                    </span><span style="color:#183691;">&quot;</span><span style="color:#0086b3;">{}</span><span style="color:#183691;"> it&#39;s your turn. Where do you want to place your mark? Your input should be the column direction (top, center, bottom) and the row direction (left, center, right) separated by a minus, e.g. </span><span style="color:#0086b3;">\&quot;</span><span style="color:#183691;">top-left</span><span style="color:#0086b3;">\&quot;</span><span style="color:#183691;"> or </span><span style="color:#0086b3;">\&quot;</span><span style="color:#183691;">center</span><span style="color:#0086b3;">\&quot;</span><span style="color:#183691;">&quot;</span><span style="color:#323232;">,
+                    name
+                );
+                self.writer.</span><span style="color:#62a35c;">writeln</span><span style="color:#323232;">(</span><span style="font-weight:bold;color:#a71d5d;">&amp;</span><span style="color:#323232;">msg);
+
+                </span><span style="font-weight:bold;color:#a71d5d;">let</span><span style="color:#323232;"> input </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">self.reader.</span><span style="color:#62a35c;">readln</span><span style="color:#323232;">();
+                </span><span style="font-weight:bold;color:#a71d5d;">if let </span><span style="color:#0086b3;">Ok</span><span style="color:#323232;">(pos) </span><span style="font-weight:bold;color:#a71d5d;">= </span><span style="color:#323232;">PixelCoord::try_from(input.</span><span style="color:#62a35c;">as_str</span><span style="color:#323232;">()) {
+                    </span><span style="font-weight:bold;color:#a71d5d;">return</span><span style="color:#323232;"> pos;
+                }
+
+                self.writer.</span><span style="color:#62a35c;">writeln</span><span style="color:#323232;">(</span><span style="color:#183691;">&quot;That is not a valid input...&quot;</span><span style="color:#323232;">);
+            }
+        }
+    }
+}
+</span></code></pre><h2 id="summary">Summary</h2>
+<p>And that's it, we've got ourselves a working Tik-Tak-Toe Game and learnt something about DDD. The complete project can be seen on <a href="https://github.com/Dgame/tik-tak-toe-ddd">Github</a>. I must say that everything here is <strong>my own and current understanding of DDD</strong>. If you have any suggestions for improvement of any kind, please let me know <a href="https://github.com/Dgame/blog/pulls">or write a PR</a>. I'm happy to receive any kind of criticism!</p>
+
+    </div>
+    
+</div>
+
+            </div>
+            
+        </div>
+        
+<div class="footer">
+    
+    <p>Powered by <a href="https://getzola.org">Zola</a></p>
+    
+</div>
+
+    </div>
+    <script src="https:&#x2F;&#x2F;dgame.github.io&#x2F;blog&#x2F;js&#x2F;slim.js"></script>
+    
+</body>
+
+</html>
