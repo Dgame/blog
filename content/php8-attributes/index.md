@@ -940,5 +940,5 @@ Perfect! Seems like we're done.
 
 ## Summary
 
-We just made a simple but reliable deserializer thanks to the PHP 8 attributes. The `Serializer` components are a lot easier, therefore I wont cover that here. I hope you enjoyed that little ride and that you experienced how cool the new PHP 8 features are!
+We just made a simple but reliable deserializer thanks to the PHP 8 attributes. The `Serializer` components are a lot easier, therefore I wont cover it here. I hope you enjoyed this little ride and experienced how cool the new PHP 8 features are!
 The finished project can be found [on Github](https://github.com/Dgame/php-serde).
