@@ -155,7 +155,7 @@ final class UserDefinedObjectDeserializer implements Deserializer
 ```
 
 You may have wondered about `assert($input instanceof stdClass);`.
-If we want to e.g. deserialize json, we have two options: either decode it as an associative array or as a `stdClass`. Most of the time, we want to have an associative array but in this case, we really want a `stdClass`. The reason for that is simple: if we had an assoc. array, we could not easily differentiate between real (assoc.) array and objects. But with a `stdClass` we can: each object is a `stdClass` and each array an array.
+If we want to e.g. deserialize json, we have two options: either decode it as an associative array or as a `stdClass`. Most of the time we want to have an associative array but in this case, we really want a `stdClass`. The reason for that is simple: if we had an assoc. array, we could not easily differentiate between real (assoc.) array and objects. But with a `stdClass` we can: each object is a `stdClass` and each array is an array.
 
 No let's implement the initialization in the constructor:
 
