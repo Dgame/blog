@@ -22,7 +22,7 @@ let foo: Foo = serde_json::from_str("{ \"id\": 23 }").unwrap();
 ```
 <small>Of course we could smash those attributes in one long statement</small>
 
-I often thought about implementing it in such way in PHP, but each time I instantly discarded that idea as soon as it came to my mind. That's because prior to PHP 8 you had to use doc-comments. And parsing them or even relying on such a textual structure was just painful. But now, with attributes in php 8? Worth considering! Let's see how we _could_ translate this to modern PHP:
+I often thought about implementing it the same way in PHP, but each time I instantly discarded that idea as soon as it came to my mind. That's because prior to PHP 8 you had to use doc-comments. And parsing them or even relying on such a textual structure was just painful. But now, with attributes in php 8? Worth considering! Let's see how we _could_ translate this to modern PHP:
 
 ```php
 <?php
