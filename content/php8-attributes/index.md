@@ -93,7 +93,7 @@ interface Deserializer
 }
 ```
 
-A `Deserializer` accepts an `mixed` argument and translates it to the wanted type, for example for `int`:
+A `Deserializer` accepts a `mixed` argument and translates it to the wanted type. For example for `int`:
 
 ```php
 <?php
