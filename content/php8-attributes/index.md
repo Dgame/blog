@@ -603,7 +603,7 @@ final class Bar
 $bar = Bar::deserialize("{ \"children\": [ { \"id\": 42 } ] }");
 ```
 
-We have no way of knowing, that `$children` is a array of `Foo`. Even if we would rely on the doc-comments, it's optional and there is no way to ensure it's correct. Therefore we need to add the `ArrayOf` _Attribute_:
+We have no way of knowing, that `$children` is an array of `Foo`. Even if we would rely on the doc-comments, it's optional and there is no way to ensure it's correct. Therefore we need to add the `ArrayOf` _Attribute_:
 
 ```php
 <?php
