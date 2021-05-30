@@ -76,7 +76,7 @@ final class Rename
 }
 ```
 
-To define your own attributes, you have to annotate them with `#[Attribute]`. If you do that, you can smash them on everything you want, properties, classes, parameters etc. But we want to limit this only to properties, therefore, we have to specify the attribute-flags (the first and only constructor argument) as such: `Attribute::TARGET_PROPERTY`. What about `Attribute::IS_REPEATABLE`? Normally we cannot annotate something with the same attribute twice, but in the case of `Alias` we want to allow that, therefore we have to extend the attribute-flags (which is a bit-mask) with `Attribute::IS_REPEATABLE`.
+To define your own attributes, you have to annotate them with `#[Attribute]`. If you do that, you can smash them on everything you want: properties, classes, parameters etc. But we want to limit this only to properties. Therefore, we have to specify the attribute-flags (the first and only constructor argument) as such: `Attribute::TARGET_PROPERTY`. What about `Attribute::IS_REPEATABLE`? Normally we cannot annotate something with the same attribute twice, but in the case of `Alias` we want to allow that, therefore we have to extend the attribute-flags (which is a bit-mask) with `Attribute::IS_REPEATABLE`.
 
 With that in mind, we can do the interpretation with specialized `Deserializers`:
 
