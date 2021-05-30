@@ -5,7 +5,7 @@ date = 2021-01-01
 tags = ["PHP", "PHP 8", "Serde", "Rust"]
 +++
 
-With PHP 8 a lot of long awaited features came. I'm really excited about `match` expressions, constructor property promotion, named arguments, but I dare to say that many aren't that excited about attributes as I'm. I've heard that many even asked "Yeah, what about them? What are they for?" and that's what I want to show you. First of all I'm - after that long struggle - glad that they have the same syntax as in Rust! It's just great in my opinion and one syntax tweak less I have to think about.
+With PHP 8 a lot of long awaited features were release. I'm really excited about `match` expressions, constructor property promotion, named arguments, but I dare to say that many aren't that excited about attributes as I am. I've heard that many even asked "Yeah, what about them? What are they for?" and that's what I want to show you. First of all I'm - after that long struggle - glad that they have the same syntax as in Rust! It's just great in my opinion and one syntax tweak less I have to think about.
 But what can you do with them? You may have [read about them](https://stitcher.io/blog/attributes-in-php-8) on [stitcher.io](https://stitcher.io/) which gave a neat first impression what they are capable of. But I'm more interested in my long journey of serializing / deserializing data structures. In Rust there is this amazing tool called [serde](https://serde.rs/) with which you can serialize and deserialize from and into many different data formats like json, toml etc. I've never found a smiliar tool in PHP. Sure, you can use the Zend Hydrator or it's brethren (e.g. from Symfony) but they aren't that smooth in my opinion. Let's just look on how serde handles it:
 
 ```rust
