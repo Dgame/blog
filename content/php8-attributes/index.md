@@ -871,7 +871,7 @@ trait Deserialize
 }
 ```
 
-With that we would be able to do our examples without configuring all of the `Deserializer`. And if we want to deserialize json or another format? well, we _could_ just use another `Deserialize`-trait in another namespace which delegates the deserialize process to the "main" `Deserialize`-trait:
+With that we would be able to do our examples without configuring all of the `Deserializer`. And if we want to deserialize json or another format? Well, we _could_ just use another `Deserialize`-trait in another namespace which delegates the deserialize process to the "main" `Deserialize`-trait:
 
 ```php
 <?php
