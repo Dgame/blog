@@ -566,7 +566,7 @@ if ($value === null && $property->hasDefaultValue()) {
 // ...
 ```
 
-If the belonging value in `$input` is `null` and the property has an default-value, we keep that default-value.
+If the corresponding value in `$input` is `null` and the property has a default-value, we keep that default-value.
 
 ```php
 <?php
