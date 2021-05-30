@@ -534,7 +534,7 @@ final class UserDefinedObjectDeserializer implements Deserializer
 }
 ```
 
-Let's get over it piece by piece:
+Let's go over it piece by piece:
 
 ```php
 <?php
